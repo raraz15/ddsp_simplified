@@ -149,3 +149,5 @@ data/**
 logs/**
 model_checkpoints/**
 audio_clips/**
+
+log.txt
