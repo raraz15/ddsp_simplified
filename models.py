@@ -78,7 +78,6 @@ class Autoencoder(SaveableModel):
             outputs["audio_synth"] = self.reverb(outputs)            
         return outputs
 
-    # TODO: REMOVE?
     def get_audio_from_outputs(self, outputs):
         """Extract audio output tensor from outputs dict of call()."""
         return outputs['audio_synth']
@@ -139,7 +138,7 @@ class SupervisedAutoencoder(Autoencoder):
     def encode(self, features): 
         """Loudness and F0 is read. z is encoded optionally."""
         
-        if self.preprocessor is not None: # Upsample and Scale the features
+        if self.preprocessor is not None: # Downsample and Scale the features
             features.update(self.preprocessor(features))
         if self.encoder is not None:
             features.update(self.encoder(features)) 

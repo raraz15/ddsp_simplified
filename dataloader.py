@@ -51,9 +51,10 @@ def extract_features(frames, mfcc=False):
     return concat_dct(features)
 
 def _make_dataset(features, batch_size=32):
-    features = tf.data.Dataset.from_tensor_slices(features)
+    features = Dataset.from_tensor_slices(features)
+    #features = features.shuffle()
     features = features.batch(batch_size)
-    features = features.prefetch(tf.data.experimental.AUTOTUNE)
+    #features = features.prefetch(tf.data.experimental.AUTOTUNE)
     return features
 
 def preprocess_ex(ex, mfcc=False, log_mel=False):
