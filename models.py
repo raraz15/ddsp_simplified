@@ -5,31 +5,8 @@ from tensorflow.keras import metrics as tfkm
 
 from synthesizers import *
 
-
-class SaveableModel(Model):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.save_folder_dir = "model_checkpoints"
-        
-    def save(self, path):
-        assert path.endswith(".ckpt"), "Save Path should be ending with .ckpt"
-        assert "/" in path, "To avoid confusion give a path with folder/file structure"
-        f = os.path.join(self.save_folder_dir, path)
-        os.makedirs(f,exist_ok=True)
-        self.save_weights(f)
-        return f
-        
-    def load(self, path):
-        assert path.endswith(".ckpt"), "Load Path should be ending with .ckpt"
-        assert "/" in path, "To avoid confusion give a path with folder/file structure"
-        f = os.path.join(self.save_folder_dir, path)
-        self.load_weights(f)
-        
-    def build_load(self, path, song):
-        self(song)
-        self.load(path)
-        
-class Autoencoder(SaveableModel):
+# TODO: do not save the harmonic and noise to the features??
+class Autoencoder(Model):
     def __init__(self,
                preprocessor=None,
                add_reverb=False,
@@ -66,7 +43,6 @@ class Autoencoder(SaveableModel):
     def decode(self, features):
         raise NotImplementedError
     
-    # TODO: do not save the harmonic and noise to the features??
     def dsp_process(self, features):
         """Synthesizes audio and adds reverb if specified."""
 
@@ -78,9 +54,15 @@ class Autoencoder(SaveableModel):
             outputs["audio_synth"] = self.reverb(outputs)            
         return outputs
 
+    # code from github repo, kept it but unnecessary
     def get_audio_from_outputs(self, outputs):
         """Extract audio output tensor from outputs dict of call()."""
         return outputs['audio_synth']
+
+    def transfer_timbre(self, features):
+        model_output = self(features)
+        audio_synth = self.get_audio_from_outputs(model_output)
+        return audio_synth.numpy().reshape(-1)    
 
     def call(self, features):
         _features = features.copy()
@@ -152,11 +134,11 @@ class SupervisedAutoencoder(Autoencoder):
         processed_features = self.dsp_process(features)
         return processed_features
     
+# TODO: fix!    
 class UnsupervisedAutoencoder(Autoencoder):
     def __init__(self,
                preprocessor=None,
-               encoder_f0=None,
-               encoder_z=None,
+               encoder=None,
                decoder=None,
                add_reverb=False,
                loss_fn=None,
@@ -168,17 +150,17 @@ class UnsupervisedAutoencoder(Autoencoder):
         
         super().__init__(preprocessor, add_reverb, loss_fn, n_samples, sample_rate, tracker_names=tracker_names, metric_fns=metric_fns, **kwargs)
         
-        self.encoder_f0 = encoder_f0
-        self.encoder_z = encoder_z
+        self.encoder = encoder
         self.decoder = decoder
 
     def encode(self, features):
         
-        f0_midi_scaled = self.encoder_f0(features)
-        features.update({'f0_midi_scaled': f0_midi_scaled})
-        
-        z = self.encoder_z(features)
-        features.update({'z': z})
+
+        #f0_midi_scaled = self.encoder_f0(features)
+        #features.update({'f0_midi_scaled': f0_midi_scaled})
+        #
+        #z = self.encoder_z(features)
+        #features.update({'z': z})
         
         if self.preprocessor is not None:
             features.update(self.preprocessor(features))
@@ -194,6 +176,7 @@ class UnsupervisedAutoencoder(Autoencoder):
         processed_features = self.dsp_process(features)
         
         return processed_features
+
 
 class TrackerGroup():
     def __init__(self,*names):

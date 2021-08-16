@@ -4,6 +4,17 @@ from tensorflow.keras import layers as tfkl
 from dsp_utils.core import resample
 
 
+class MLP(tf.keras.Sequential):
+    """Stack Dense -> LayerNorm -> Leaky ReLU layers."""  
+    def __init__(self, output_dim=512, n_layers=3, **kwargs):
+        layers = []
+        for _ in range(n_layers):
+            layers.append(tfkl.Dense(output_dim, activation=None))
+            layers.append(tfkl.LayerNormalization(axis=-1))
+            layers.append(tfkl.LeakyReLU())
+        super().__init__(layers, **kwargs)       
+        
+
 class DecoderWithoutLatent(tfkl.Layer):
     """ Decoder class for loudness and F0. Used in the Supervised setting."""
     
@@ -51,7 +62,6 @@ class DecoderWithoutLatent(tfkl.Layer):
         x = at_least_3d(x)
         return resample(x, self.timesteps, method='window')
     
-# TODO MLP Layernorms
 class DecoderWithLatent(tfkl.Layer):
     """Decoder class for Z, F0 and l. Used in the Unsupervised Setting."""
     
@@ -86,35 +96,23 @@ class DecoderWithLatent(tfkl.Layer):
           
         x = self.rnn(x)
         
-        x = tf.concat(inputs + [x], axis=-1) 
+        x = tf.concat(inputs + [x], axis=-1)
         x = self.MLP_rnn(x)
                        
         # Parameters of the synthesizers
         amp_out = self.dense_amp(x)
         harmonic_out = self.dense_harmonic(x)
         noise_out = self.dense_noise(x)
-        
-        #return {'amp_out': self.resample(amp_out),
-        #        'harmonic_out': self.resample(harmonic_out),
-        #        'noise_out': self.resample(noise_out)}
+    
+        return {'amp_out': self.resample(amp_out),
+                'harmonic_out': self.resample(harmonic_out),
+                'noise_out': self.resample(noise_out)}
+    
+    def resample(self, x):
+        x = at_least_3d(x)
+        return resample(x, self.timesteps, method='window')
 
-        return {'amp_out': resample(amp_out, self.timesteps, method='window'),
-                'harmonic_out': resample(harmonic_out, self.timesteps, method='window'),
-                'noise_out': resample(noise_out, self.timesteps, method='window')}
-    
-    #def resample(self, x):
-        #x = at_least_3d(x)
-    #    return core.resample(x, self.timesteps, method='window')
-        
-        
-class MLP(tf.keras.Sequential):
-    """Stack Dense -> LayerNorm -> Leaky ReLU layers."""
-    
-    def __init__(self, output_dim=256, layers=2, nonlinearity='relu', **kwargs):
-        layers = [tfkl.Dense(output_dim, activation=nonlinearity) for i in range(layers)]
-        super().__init__(layers, **kwargs)
-        
-        
+                       
 def at_least_3d(x):
     """Optionally adds time, batch, then channel dimension."""
     x = x[tf.newaxis] if not x.shape else x

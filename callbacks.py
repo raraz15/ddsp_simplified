@@ -1,31 +1,41 @@
+import os
+import numpy as np
+
 from tensorflow.keras.callbacks import Callback
+
 import wandb
 
 WANDB_API_KEY = "52c84ab3f3b5c1f999c7f5f389f5e423f46fc04a"
 
+class ModelCheckpoint(Callback):
+    def __init__(self, save_dir, monitor, **kwargs):
+        super().__init__(**kwargs)
+
+        self.monitor = monitor
+        
+        self.save_dir = save_dir  
+        os.makedirs(self.save_dir, exist_ok=True)
+        self.save_path = os.path.join(self.save_dir, 'model.ckpt')
+
+        self.best = np.Inf
+
+    def on_epoch_end(self, epoch, logs=None):
+        current = logs.get(self.monitor)
+        if np.less(current, self.best):
+            self.best = current
+            self.model.save_weights(self.save_path)
+
 class CustomWandbCallback(Callback):
 
-    def __init__(self, run_name, project_name='Supervised_Violin', **kwargs):
+    def __init__(self, config, **kwargs):
         super().__init__(**kwargs)
 
         wandb.login()
-        wandb.init(project=project_name, entity='ddsp', name=run_name)
+        wandb.init(project=config['wandb']['project_name'],
+                    entity='ddsp',
+                    name=config['run_name'],
+                    config=config)
+        self.wandb_run_dir = wandb.run.dir
         
     def on_epoch_end(self, epoch, logs=None):
         wandb.log(logs)
-        
-class ModelCheckpoint(Callback):
-    def __init__(self, model, run_name, **kwargs):
-        super().__init__(**kwargs)
-        self.model = model
-        self.run_name = run_name
-
-    def on_epoch_end(self, epoch, logs=None):
-        self.model.save("{}/{}/model.ckpt".format(self.run_name, epoch))
-
-#class BestModelChekpoint:
-#    def __init__(self, model, run_name, **kwargs):
-#
-#        self.model = model
-#        self.run_name = run_name
-

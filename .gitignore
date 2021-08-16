@@ -138,7 +138,7 @@ dmypy.json
 cython_debug/
 
 # Notebooks
-*.ipynb
+#*.ipynb
 
 # Batch files
 *.sh
@@ -149,5 +149,6 @@ data/**
 logs/**
 model_checkpoints/**
 audio_clips/**
+configs/**
 
-log.txt
+*.txt

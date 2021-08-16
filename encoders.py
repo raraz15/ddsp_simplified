@@ -4,35 +4,17 @@ import tensorflow as tf
 from tensorflow.keras import layers as tfkl
 import tensorflow_addons as tfa
 
-from dsp_utils.spectral_ops import compute_loudness, compute_f0
+from dsp_utils.spectral_ops import compute_loudness
 from dsp_utils.core import resample
 from resnet import ResNet
 
-## ----------------------------------- Supervised ---------------------------------------------
 
-def loudness_and_f0_extractor(audio_frame, loudness_nfft=2048, sample_rate=16000, frame_rate=250):
-    """Computes the loudness and extracts f0 (Hz) for a given audio frame."""
+## ------------------------- Supervised/ Unsupervised Encoders -------------------------------------------------
 
-    l = compute_loudness(audio_frame,
-                    sample_rate=sample_rate,
-                    frame_rate=frame_rate,
-                    n_fft=loudness_nfft,
-                    range_db=120.0,
-                    ref_db=20.7,
-                    use_tf=False)
-
-    f0, _ = compute_f0(audio_frame, sample_rate, frame_rate, viterbi=True) 
-
-    return {'audio': audio_frame,
-           'loudness_db': l,
-           'f0_hz': f0}
-
-
-# TODO: REMOVE TIMSTEPS, 250 ALWAYS
 class SupervisedEncoder(tfkl.Layer):
     """loudness and F0 is read from the dataset."""
     
-    def __init__(self, rnn_channels=512, z_dims=512):
+    def __init__(self, rnn_channels=512, z_dims=32):
         
         super().__init__(name='SupervisedEncoder')        
         self.encoder_z = Encoder_z(rnn_channels, z_dims) 
@@ -41,40 +23,6 @@ class SupervisedEncoder(tfkl.Layer):
         z = self.encoder_z(features)        
         return {'z': z} 
 
-# bATCH NORM ?
-class Encoder_z(tfkl.Layer):
-    # In target audio: BATCH x TS x 1
-    # Out Z: BATCH X TS X Z_DIM
-    def __init__(self, rnn_channels=512, z_dims=512):
-        
-        super().__init__(name='z_encoder')
-
-        self.norm_in = tfa.layers.InstanceNormalization(axis=-1, 
-                                   center=True, 
-                                   scale=True,
-                                   beta_initializer="random_uniform",
-                                   gamma_initializer="random_uniform")
-        
-        self.rnn = tfkl.GRU(rnn_channels, return_sequences=True)
-        self.dense_z = tfkl.Dense(z_dims)
-        #self.timesteps = timesteps
-
-    def call(self, features):
-
-        mfcc = features['mfcc']
-     
-        # is normalize in BatchNorm
-        z = self.norm_in(mfcc[:, :, tf.newaxis, :])[:, :, 0, :]
-        z = self.rnn(z)
-        z = tf.concat(z, axis=1)
-        z = self.dense_z(z)
-
-        return z
-  
-
-## ------------------------- Unsupervised ------------------------------------------------------------------
-
-# DEPRECATED
 class UnsupervisedEncoder(tfkl.Layer):
     
     def __init__(self, rnn_channels, z_dims, k_filters, s_freqs, R, n_fft=2048):
@@ -97,6 +45,30 @@ class UnsupervisedEncoder(tfkl.Layer):
         return {'z': z,
                 'f0_hz': f0,
                 'l': l}
+
+
+## ----------------------------------- Individual Encoders ---------------------------------------------
+
+
+class Encoder_z(tfkl.Layer):
+
+    def __init__(self, rnn_channels=512, z_dims=32):       
+        super().__init__(name='z_encoder')
+
+        self.norm_in = tfa.layers.InstanceNormalization(axis=-1, 
+                                   center=True, 
+                                   scale=True,
+                                   beta_initializer="random_uniform",
+                                   gamma_initializer="random_uniform")      
+        self.rnn = tfkl.GRU(rnn_channels, return_sequences=True)
+        self.dense_z = tfkl.Dense(z_dims)
+
+    def call(self, features):
+        mfcc = features['mfcc'] 
+        z = self.norm_in(mfcc[:, :, tf.newaxis, :])[:, :, 0, :]
+        z = self.rnn(z)
+        z = self.dense_z(z)
+        return z
 
 class LoudnessExtractor(tfkl.Layer):
     
@@ -132,5 +104,4 @@ class Encoder_f(tfkl.Layer):
         unit_midi_bins = tf.reshape(tf.range(depth), (1, 1, -1)) / depth
         unit_midi_bins = tf.cast(unit_midi_bins,tf.float32)
         f0_unit_midi = tf.reduce_sum(unit_midi_bins * probs, axis=-1, keepdims=True)  # [B, T, 1]
-        return f0_unit_midi
-    
+        return f0_unit_midi        

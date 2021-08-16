@@ -59,7 +59,7 @@ class PerceptualLoss(tfkl.Layer):
         
         return {"perc_loss":loss}
 
-    
+# Used in Unsupervised    
 class MultiLoss(tfkl.Layer):
     
     def __init__(self, logmag_weight=1.0, perceptual_loss_weight=5e-5, name="multi_loss"):

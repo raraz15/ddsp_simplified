@@ -1,38 +1,30 @@
 import glob
 import numpy as np
-import librosa
 
 from tensorflow.data import Dataset
 from sklearn.model_selection import train_test_split
 
-from dsp_utils.spectral_ops import compute_mfcc #, compute_logmel
-
-from encoders import loudness_and_f0_extractor
-from postprocessing import frame_generator
+from feature_extraction import extract_features_from_frames
+from utilities import frame_generator, load_track
 
 
-def make_supervised_dataset(path, mfcc=False, batch_size=32, sr=16000):
+# Normalize each track or normalize each frame ?????
+def make_supervised_dataset(path, mfcc=False, batch_size=32, sample_rate=16000):
     """Loads all the mp3 files in the path, creates frames and extracts features."""
     frames = []
     for file in glob.glob(path+'/*.mp3'):    
-        track, _ = librosa.load(file, sr=sr)
-        frames.append(frame_generator(track))       
+        track = load_track(file, sample_rate=sample_rate, normalize=True)
+        frames.append(frame_generator(track, 4*sample_rate))       
     frames = np.concatenate(frames, axis=0)   
     trainX, valX = train_test_split(frames)
-    train_features = extract_features(trainX, mfcc)
-    val_features = extract_features(valX, mfcc)
-    return _make_dataset(train_features, batch_size), _make_dataset(val_features, batch_size), None  
+    print('Train set size: {}'.format(len(trainX)))
+    print('Val set size: {}'.format(len(valX)))
+    train_features = extract_features_from_frames(trainX, mfcc=mfcc, sample_rate=sample_rate)
+    val_features = extract_features_from_frames(valX, mfcc=mfcc, sample_rate=sample_rate)
+    return _make_dataset(train_features, batch_size), _make_dataset(val_features, batch_size), None
 
-# TODO: better coding
-def extract_features(frames, mfcc=False):
-    """Extracts loudness and f0. Optionally mfcc."""
-    features = list(map(loudness_and_f0_extractor, frames))
-    if mfcc:
-        for i, feat in enumerate(features):
-            feat['mfcc'] = compute_mfcc(feat['audio'], lo_hz=20.0, hi_hz=8000.0,
-                                            fft_size=1024, mel_bins=128, mfcc_bins=30)
-            features[i] = feat
-    return concat_dct(features)
+#def make_unsupervised_dataset(path, batch_size=32, sr=16000):
+#    pass
 
 def _make_dataset(features, batch_size=32, seed=None):
     features = Dataset.from_tensor_slices(features)
@@ -40,9 +32,6 @@ def _make_dataset(features, batch_size=32, seed=None):
     features = features.batch(batch_size)
     features = features.prefetch(1) # preftech 1 batch
     return features
-
-def concat_dct(dcts):
-    return {k: [dct[k] for dct in dcts] for k in dcts[0].keys()}
 
 # ------------------------------- maybe for Nsynth --------------------------
 
