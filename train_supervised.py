@@ -78,7 +78,7 @@ if __name__ == '__main__':
     config['model']['path'] = callbacks[0].save_path
 
     # Save the config for future reference
-    config_save_fpath = os.path.join(model_dir, config['run_name']+'.yml')
+    config_save_fpath = os.path.join(model_dir, config['run_name']+'.yaml')
     with open(config_save_fpath, 'w') as f:
         yaml.dump(config, f)
 
