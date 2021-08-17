@@ -31,7 +31,7 @@ class UnsupervisedEncoder(tfkl.Layer):
         
         self.encoder_z = Encoder_z(rnn_channels, z_dims)
         self.encoder_f = Encoder_f(k_filters, s_freqs, R)
-        self.encoder_l = LoudnessExtractor(n_fft)
+        self.encoder_l = Encoder_l(n_fft)
         
         self.freq_scale = tf.convert_to_tensor(440* 2**((np.arange(0,128) -69) /12), dtype=tf.float32)
     
@@ -70,7 +70,7 @@ class Encoder_z(tfkl.Layer):
         z = self.dense_z(z)
         return z
 
-class LoudnessExtractor(tfkl.Layer):
+class Encoder_l(tfkl.Layer):
     
     def __init__(self, n_fft=2048):
         super().__init__(name='loudness_extractor')

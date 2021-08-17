@@ -9,12 +9,13 @@ from utilities import frame_generator, load_track
 
 
 # Normalize each track or normalize each frame ?????
-def make_supervised_dataset(path, mfcc=False, batch_size=32, sample_rate=16000):
+def make_supervised_dataset(path, mfcc=False, batch_size=32, sample_rate=16000, normalize=False):
     """Loads all the mp3 files in the path, creates frames and extracts features."""
     frames = []
     for file in glob.glob(path+'/*.mp3'):    
-        track = load_track(file, sample_rate=sample_rate, normalize=True)
-        frames.append(frame_generator(track, 4*sample_rate))       
+        track = load_track(file, sample_rate=sample_rate, normalize=normalize)
+        # create 4 seconds long frames
+        frames.append(frame_generator(track, 4*sample_rate))     
     frames = np.concatenate(frames, axis=0)   
     trainX, valX = train_test_split(frames)
     print('Train set size: {}'.format(len(trainX)))
@@ -23,12 +24,11 @@ def make_supervised_dataset(path, mfcc=False, batch_size=32, sample_rate=16000):
     val_features = extract_features_from_frames(valX, mfcc=mfcc, sample_rate=sample_rate)
     return _make_dataset(train_features, batch_size), _make_dataset(val_features, batch_size), None
 
-#def make_unsupervised_dataset(path, batch_size=32, sr=16000):
-#    pass
+#def make_unsupervised_dataset(path, batch_size=32, sr=16000, normalize=False):
 
 def _make_dataset(features, batch_size=32, seed=None):
     features = Dataset.from_tensor_slices(features)
-    features = features.shuffle(len(features)*2, seed, True) # reshuflle at each iteration
+    features = features.shuffle(len(features)*2, seed, True) # shuflle at each iteration
     features = features.batch(batch_size)
     features = features.prefetch(1) # preftech 1 batch
     return features

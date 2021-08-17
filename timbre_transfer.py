@@ -1,67 +1,53 @@
-import os
 import yaml
-from scipy.io.wavfile import write
-
-import librosa
-
-from preprocessing import F0LoudnessPreprocessor
-from encoders import SupervisedEncoder
-from decoders import DecoderWithoutLatent, DecoderWithLatent
-from models import SupervisedAutoencoder, UnsupervisedAutoencoder
-from losses import SpectralLoss, MultiLoss
+import argparse
 
 from feature_extraction import process_track
-from utilities import load_track
+from utilities import load_track, write_audio
+from train_supervised import make_supervised_model
 
 ## -------------------------------------------- Timbre Transfer -------------------------------------------------
 
+def load_model_from_config(config):
+    model = make_supervised_model(config)
+    model.load_weights(config['model']['path'])
+    return model   
+
 # scale loudness ?
-def transfer_timbre_from_filepath(model, path, sample_rate=16000, pitch_shift=0, scale_loudness=0, **kwargs):
-    track = load_track(path, sample_rate, pitch_shift=pitch_shift) 
+def transfer_timbre_from_path(model, path, sample_rate=16000, pitch_shift=0,
+                            scale_loudness=0, normalize=False, **kwargs):
+    track = load_track(path, sample_rate, pitch_shift=pitch_shift, normalize=normalize) 
     features = process_track(track, model=model, **kwargs)
     features["loudness_db"] +=  scale_loudness
     transfered_track = model.transfer_timbre(features)
     return transfered_track
 
-def write_audio(audio, title, RUN_NAME, sample_rate=16000, normalize=True):
-    assert '.wav' in title, 'Title must include .wav extension'
-    output_path = os.path.join('audio_clips','outputs', RUN_NAME, title)
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    if normalize:
-        audio = librosa.util.normalize(audio)
-    write(output_path, sample_rate, audio)
+if __name__ == "__main__":
 
-def load_model_from_config(path):
-    
-    with open(path) as file:
-        config = dict(yaml.load(file, Loader=yaml.FullLoader))
-        
-    data, train = config['data'], config['training']
-    model_config, optim = config['model'], config['optimizer']   
-    
-    preprocessor = F0LoudnessPreprocessor(timesteps=data['preprocessing_time'])
-    
-    # Create the model and define the training 
-    if model_config['encoder']:
-        encoder = SupervisedEncoder()
-        decoder = DecoderWithLatent(timesteps=model_config['decoder_time'])
-    else:
-        encoder = None
-        decoder = DecoderWithoutLatent(timesteps=model_config['decoder_time'])
+    parser = argparse.ArgumentParser(description='Timbre Transfer Parameters.')
+    parser.add_argument('-c', '--config-path', type=str, required=True, help='Path to config file.')
+    parser.add_argument('-a', '--audio-path', type=str, required=True, help='Path to audio file.')
+    parser.add_argument('-o', '--output-path', type=str, required=True, help='Output audio path.')
+    parser.add_argument('-p', '--pitch-shift', type=int, default=0, help='Semi tones pitch shift.')
+    parser.add_argument('-s', '--scale-loudness', type=int, default=0, help='Loudness scale.')
+    parser.add_argument('-n', '--normalize', default=False, action='store_true', help='Normalize audio.')
+    args = parser.parse_args()    
 
-    loss = SpectralLoss() if config['loss']['type'] == 'spectral' else MultiLoss()
-    
-    if loss.name== 'spectral_loss':
-        tracker_names = ['spec_loss']
-        monitor = 'val_spec_loss'
-    else:
-        tracker_names = ['spec_loss', 'perc_loss', 'total_loss']
-        monitor = 'val_total_loss'
-    model = SupervisedAutoencoder(preprocessor=preprocessor,
-                                encoder=encoder,
-                                decoder=decoder,
-                                loss_fn=loss,
-                                tracker_names=tracker_names,
-                                add_reverb=model_config['reverb'])
-    model.load_weights(model_config['path'])
-    return model
+    with open(args.config_path) as file:
+        config = dict(yaml.load(file, Loader=yaml.FullLoader))    
+    model = load_model_from_config(config)
+    print('Model loaded.')
+    transfered_track = transfer_timbre_from_path(model,
+                                                args.audio_path,
+                                                sample_rate=config['data']['sample_rate'],
+                                                pitch_shift=args.pitch_shift,
+                                                scale_loudness=args.scale_loudness,
+                                                mfcc=config['model']['encoder'],
+                                                frame_rate=config['data']['preprocessing_time'],
+                                                #log_mel=config[]
+                                                normalize=args.normalize)
+    print('Timbre transferred.')
+    print('Writing audio.')                                                
+    write_audio(transfered_track,
+                args.output_path,
+                sample_rate=config['data']['sample_rate'],
+                normalize=args.normalize)                                                

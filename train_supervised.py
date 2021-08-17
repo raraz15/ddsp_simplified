@@ -14,6 +14,24 @@ from dataloader import make_supervised_dataset
 
 # TODO: use epoch name in model saving
 
+def make_supervised_model(config):
+    """Creates the necessary components of a supervised ddsp using the config."""
+    preprocessor = F0LoudnessPreprocessor(timesteps=config['data']['preprocessing_time'])
+    if config['model']['encoder']:
+        encoder = SupervisedEncoder()
+        decoder = DecoderWithLatent(timesteps=config['model']['decoder_time'])
+    else:
+        encoder = None
+        decoder = DecoderWithoutLatent(timesteps=config['model']['decoder_time'])
+    loss = SpectralLoss(logmag_weight=config['loss']['logmag_weight'])
+    model = SupervisedAutoencoder(preprocessor=preprocessor,
+                                encoder=encoder,
+                                decoder=decoder,
+                                loss_fn=loss,
+                                tracker_names=['spec_loss'],
+                                add_reverb=config['model']['reverb'])
+    return model
+
 if __name__ == '__main__':
     
     parser = argparse.ArgumentParser(description='Supervised Training Parameters.')
@@ -30,32 +48,16 @@ if __name__ == '__main__':
     train_set, validation_set, _ = make_supervised_dataset(data['path'],
                                                     mfcc=model_config['encoder'],
                                                     batch_size=train['batch_size'],
-                                                    sample_rate=data['sample_rate'])
+                                                    sample_rate=data['sample_rate'],
+                                                    normalize=False)
     print('Dataset created.')
-    preprocessor = F0LoudnessPreprocessor(timesteps=data['preprocessing_time'])
     
     # Create the model and define the training 
-    if model_config['encoder']:
-        encoder = SupervisedEncoder()
-        decoder = DecoderWithLatent(timesteps=model_config['decoder_time'])
-    else:
-        encoder = None
-        decoder = DecoderWithoutLatent(timesteps=model_config['decoder_time'])
-
-    loss = SpectralLoss(logmag_weight=config['loss']['logmag_weight'])
-    tracker_names = ['spec_loss']
     monitor = 'val_spec_loss'
-        
-    model = SupervisedAutoencoder(preprocessor=preprocessor,
-                                encoder=encoder,
-                                decoder=decoder,
-                                loss_fn=loss,
-                                tracker_names=tracker_names,
-                                add_reverb=model_config['reverb'])
+    model = make_supervised_model(config)
     optimizer = Adam(learning_rate=ExponentialDecay(optim['lr'],
                                 decay_steps=optim['decay_steps'],
                                 decay_rate=optim['decay_rate']))
-
 
     # Model Saving and Experiment Tracking
     # It looks ugly, but is necessary
