@@ -84,7 +84,8 @@ class FilteredNoiseSynthesizer(tfkl.Layer):
         return core.frequency_filter(signal,
                                      magnitudes,
                                      window_size=self.window_size)
-    
+
+# Some things look a little changed from the original code    
 class Reverb(tfkl.Layer):
 
     def __init__(self,

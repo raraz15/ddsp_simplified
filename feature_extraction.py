@@ -7,16 +7,17 @@ from utilities import concat_dct, frame_generator
 
 
 # TODO: decide on nffts
-# add f0=False for unsupervised dataset
 def feature_extractor(audio_frame, sample_rate=16000, frame_rate=250,
-                    l_nfft=2048, mfcc=False, log_mel=False,
-                    mfcc_nfft=1024, logmel_nfft=2048, model=None):
+                    f0=True, mfcc=False, log_mel=False,
+                    l_nfft=2048,mfcc_nfft=1024, logmel_nfft=2048,
+                    model=None):
     """Extracts features for a single frame."""
     
     features = {'audio': audio_frame}
 
-    f0, _ = compute_f0(audio_frame, sample_rate, frame_rate, viterbi=True) 
-    features['f0_hz'] = f0
+    if f0:
+        f0, _ = compute_f0(audio_frame, sample_rate, frame_rate, viterbi=True) 
+        features['f0_hz'] = f0
 
     if mfcc:
         # overlap and fft_size taken from the code

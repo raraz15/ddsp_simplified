@@ -33,7 +33,7 @@ class UnsupervisedEncoder(tfkl.Layer):
         self.encoder_f = Encoder_f(k_filters, s_freqs, R)
         self.encoder_l = Encoder_l(n_fft)
         
-        self.freq_scale = tf.convert_to_tensor(440* 2**((np.arange(0,128) -69) /12), dtype=tf.float32)
+        self.freq_scale = tf.convert_to_tensor(440* 2**((np.arange(0,128)-69)/12), dtype=tf.float32)
     
     def call(self, features):
         

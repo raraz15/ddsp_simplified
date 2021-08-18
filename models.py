@@ -32,7 +32,7 @@ class Autoencoder(Model):
         
         self.add_reverb = add_reverb
         if self.add_reverb:
-            self.reverb = Reverb(reverb_length=64000)
+            self.reverb = Reverb(reverb_length=n_samples)
         self.trackers = TrackerGroup(*tracker_names)
         self.metric_fns = metric_fns
             

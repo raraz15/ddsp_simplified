@@ -2,13 +2,13 @@ import glob
 import numpy as np
 
 from tensorflow.data import Dataset
+import tensorflow_datasets as tfds
 from sklearn.model_selection import train_test_split
 
-from feature_extraction import extract_features_from_frames
+from feature_extraction import extract_features_from_frames, feature_extractor
 from utilities import frame_generator, load_track
 
 
-# Normalize each track or normalize each frame ?????
 def make_supervised_dataset(path, mfcc=False, batch_size=32, sample_rate=16000, normalize=False):
     """Loads all the mp3 files in the path, creates frames and extracts features."""
     frames = []
@@ -24,8 +24,6 @@ def make_supervised_dataset(path, mfcc=False, batch_size=32, sample_rate=16000, 
     val_features = extract_features_from_frames(valX, mfcc=mfcc, sample_rate=sample_rate)
     return _make_dataset(train_features, batch_size), _make_dataset(val_features, batch_size), None
 
-#def make_unsupervised_dataset(path, batch_size=32, sr=16000, normalize=False):
-
 def _make_dataset(features, batch_size=32, seed=None):
     features = Dataset.from_tensor_slices(features)
     features = features.shuffle(len(features)*2, seed, True) # shuflle at each iteration
@@ -33,51 +31,45 @@ def _make_dataset(features, batch_size=32, seed=None):
     features = features.prefetch(1) # preftech 1 batch
     return features
 
-# ------------------------------- maybe for Nsynth --------------------------
+def make_unsupervised_dataset(path, batch_size=32, sample_rate=16000, normalize=False):
+    frames = []
+    for file in glob.glob(path+'/*.mp3'):    
+        track = load_track(file, sample_rate=sample_rate, normalize=normalize)
+        # create 4 seconds long frames
+        frames.append(frame_generator(track, 4*sample_rate))     
+    frames = np.concatenate(frames, axis=0)   
+    trainX, valX = train_test_split(frames)
+    train_features = extract_features_from_frames(trainX, f0=False, mfcc=True, log_mel=True, sample_rate=sample_rate)
+    val_features = extract_features_from_frames(valX, f0=False, mfcc=True, log_mel=True, sample_rate=sample_rate)
+    return _make_dataset(train_features, batch_size), _make_dataset(val_features, batch_size), None    
+
+#/scratch/users/hbalim15/tensorflow_datasets/nsynth/
+def make_nsynth_dataset(batch_size, path='nsynth/gansynth_subset.f0_and_loudness:2.3.3'):
+    split=["train[:80%]", 'validation[:10%]', 'test[:10%]']
+    train_set, val_set, test_set = tfds.load(path,
+                                            download=False,
+                                            shuffle_files=True,
+                                            batch_size=batch_size,
+                                            split=split).prefetch(1).map(lambda x: preprocess_ex(x))
+    return train_set, val_set, test_set
+
+def preprocess_ex(ex):
+    #'instrument_source': ex['instrument']['source'],
+    #'instrument_family': ex['instrument']['family'],
+    #'instrument': ex['instrument']['label'],
+    #'f0_confidence': ex['f0']['confidence'],    
+    dct = {'pitch': ex['pitch'],  
+          'f0_hz': ex['f0']['hz'],
+          'loudness_db': ex['loudness']['db']}
+    dct.update(feature_extractor(ex['audio'], sample_rate=16000, frame_rate=250,
+                        f0=False, mfcc=True, log_mel=True))
+    return dct  
+
+
 
 #import tensorflow as tf
-#import tensorflow_datasets as tfds
+
 #from tensorflow.keras.utils import Sequence
-
-#def make_violin_set(batch_size=32, mfcc=False):
-#    frames = np.load(open("audio_clips/Violin/npy/violin_frames.npy","rb"))
-#    trainX, valX = train_test_split(frames)
-#    train_features = extract_features(trainX, mfcc)
-#    val_features = extract_features(valX, mfcc)
-#    return _make_dataset(train_features, batch_size), _make_dataset(val_features, batch_size), None  
-
-#def make_violin_set():
-#    frames = np.load(open("audio_clips/violin/npy/violin_frames.npy","rb"))
-#    trainX, valX = train_test_split(frames)
-#    trainX =  tf.data.Dataset.from_tensor_slices(concat_dct(list(map(loudness_and_f0_extractor, trainX))))
-#    valX =  tf.data.Dataset.from_tensor_slices(concat_dct(list(map(loudness_and_f0_extractor, valX))))
-#    return trainX.prefetch(tf.data.experimental.AUTOTUNE), valX.prefetch(tf.data.experimental.AUTOTUNE), None
-
-#def preprocess_ex(ex, mfcc=False, log_mel=False):
-#    dct = {'pitch': ex['pitch'],
-#          'audio': ex['audio'],   
-#          'instrument_source': ex['instrument']['source'],
-#          'instrument_family': ex['instrument']['family'],
-#          'instrument': ex['instrument']['label'],
-#          'f0_hz': ex['f0']['hz'],
-#          'f0_confidence': ex['f0']['confidence'],
-#          'loudness_db': ex['loudness']['db']}
-#    if log_mel:
-#        dct['log_mel'] = compute_logmel(ex['audio'])
-#    if mfcc:
-#        dct["mfcc"] = compute_mfcc(ex['audio'], lo_hz=20.0, hi_hz=8000.0,
-#                    fft_size=1024, mel_bins=128, mfcc_bins=30)
-#    return dct
-
-#def make_datasets_original(batch_size, mfcc, log_mel, percent=100):
-#    train_set = tfds.load('nsynth/gansynth_subset.f0_and_loudness:2.3.3',download=False,
-#                      shuffle_files=True,batch_size=batch_size,split="train[:{}%]".format(percent)).map(lambda x: preprocess_ex(x, mfcc, log_mel))
-#    val_set = tfds.load('nsynth/gansynth_subset.f0_and_loudness:2.3.3',download=False,
-#                      shuffle_files=True,batch_size=batch_size,split="valid[:{}%]".format(percent)).map(lambda x: preprocess_ex(x, mfcc, log_mel))
-#    test_set = tfds.load('nsynth/gansynth_subset.f0_and_loudness:2.3.3',download=False,
-#                      shuffle_files=True,batch_size=batch_size,split="test[:{}%]".format(percent)).map(lambda x: preprocess_ex(x, mfcc, log_mel))
-#    return train_set,val_set,test_set
-    
 
 #def make_datasets(batch_size, percent=100):
 #    datasets = [create_tf_dataset_from_npzs(glob.glob("data/{}/*.npz".format(folder)), batch_size, percent) for 

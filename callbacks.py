@@ -7,6 +7,7 @@ import wandb
 
 WANDB_API_KEY = "52c84ab3f3b5c1f999c7f5f389f5e423f46fc04a"
 
+
 class ModelCheckpoint(Callback):
     def __init__(self, save_dir, monitor, **kwargs):
         super().__init__(**kwargs)
@@ -24,6 +25,9 @@ class ModelCheckpoint(Callback):
         if np.less(current, self.best):
             self.best = current
             self.model.save_weights(self.save_path)
+            with open(os.path.join(self.save_dir, 'model_info.txt'), 'w') as outfile:
+                outfile.write('epoch: {}, {}: {}'.format(epoch, self.monitor, current))
+
 
 class CustomWandbCallback(Callback):
 
