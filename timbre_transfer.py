@@ -1,3 +1,4 @@
+import os
 import yaml
 import argparse
 
@@ -13,8 +14,9 @@ def load_model_from_config(config):
     return model   
 
 # scale loudness ?
-def transfer_timbre_from_path(model, path, sample_rate=16000, pitch_shift=0,
-                            scale_loudness=0, normalize=False, **kwargs):
+def transfer_timbre_from_path(model, path, sample_rate=16000,
+                            pitch_shift=0, scale_loudness=0, 
+                            normalize=False, **kwargs):
     track = load_track(path, sample_rate, pitch_shift=pitch_shift, normalize=normalize) 
     features = process_track(track, model=model, **kwargs)
     features["loudness_db"] +=  scale_loudness
@@ -26,7 +28,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Timbre Transfer Parameters.')
     parser.add_argument('-c', '--config-path', type=str, required=True, help='Path to config file.')
     parser.add_argument('-a', '--audio-path', type=str, required=True, help='Path to audio file.')
-    parser.add_argument('-o', '--output-path', type=str, required=True, help='Output audio path.')
+    parser.add_argument('-o', '--output-path', type=str, default='', help='Output audio path.')
     parser.add_argument('-p', '--pitch-shift', type=int, default=0, help='Semi tones pitch shift.')
     parser.add_argument('-s', '--scale-loudness', type=int, default=0, help='Loudness scale.')
     parser.add_argument('-n', '--normalize', default=False, action='store_true', help='Normalize audio.')
@@ -46,8 +48,16 @@ if __name__ == "__main__":
                                                 #log_mel=config[]
                                                 normalize=args.normalize)
     print('Timbre transferred.')
-    print('Writing audio.')                                                
+    print('Writing audio.')
+    if not args.output_path:
+        output_dir =  os.path.join('audio_clips','outputs',config['run_name'])
+        os.makedirs(output_dir, exist_ok=True)
+        input_name = os.path.basename(args.audio_path)
+        output_name = os.path.splitext(input_name)[0]+'-timbre_transfered.wav'
+        output_path = os.path.join(output_dir, output_name)
+    else:
+        output_path=args.output_path
     write_audio(transfered_track,
-                args.output_path,
+                output_path,
                 sample_rate=config['data']['sample_rate'],
                 normalize=args.normalize)                                                
