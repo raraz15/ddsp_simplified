@@ -37,7 +37,7 @@ if __name__ == '__main__':
 
     # Compile and train
     model.compile(optimizer)
-    model.summary()
+    print('Model compiled.')
     history = model.fit(train_set,
                         validation_data=validation_set,
                         callbacks=callbacks,
