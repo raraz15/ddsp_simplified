@@ -1,12 +1,25 @@
 import os
 
-from preprocessing import F0LoudnessPreprocessor, MidiF0LoudnessPreprocessor
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.optimizers.schedules import ExponentialDecay 
+
+from preprocessing import F0LoudnessPreprocessor, UnsupervisedPreprocessor
 from encoders import SupervisedEncoder, UnsupervisedEncoder
 from models import SupervisedAutoencoder, UnsupervisedAutoencoder
 from decoders import DecoderWithoutLatent, DecoderWithLatent
 from losses import SpectralLoss, MultiLoss
 from callbacks import ModelCheckpoint, CustomWandbCallback 
+
 from metrics import f0_midi_scaled_L1_loss #????
+
+
+# REMOVE ?
+def make_compiled_supervised_model(config):   
+    model = make_supervised_model(config)
+    optimizer = make_optimizer(config)
+    model.compile(optimizer)
+    model.load_weights(config['model']['path'])
+    return model  
 
 def make_supervised_model(config):
     """Creates the necessary components of a supervised ddsp using the config."""
@@ -26,9 +39,14 @@ def make_supervised_model(config):
                                 add_reverb=config['model']['reverb'])
     return model
 
+def make_optimizer(config):
+    optimizer = Adam(learning_rate=ExponentialDecay(config['optimizer']['lr'],
+                                decay_steps=config['optimizer']['decay_steps'],
+                                decay_rate=config['optimizer']['decay_rate']))    
+    return optimizer                                    
+
 def create_callbacks(config, monitor):
     # It looks ugly, but is necessary
-
     if config['model']['dir']: # if dir specified, save there
         model_dir = config['model']['dir']
         if not config['wandb']:
@@ -49,12 +67,12 @@ def create_callbacks(config, monitor):
 
 # TODO: enc, dec params
 # TODO metric fns
+# preprocessor ? 
 def make_unsupervised_model(config):
 
-    preprocessor = MidiF0LoudnessPreprocessor(timesteps=config['data']['preprocessing_time'])
+    preprocessor = UnsupervisedPreprocessor(timesteps=config['data']['preprocessing_time'])
 
-    #rnn_channels, z_dims, k_filters, s_freqs, R, n_fft=2048
-    encoder = UnsupervisedEncoder() 
+    encoder = UnsupervisedEncoder(timesteps=config['data']['preprocessing_time']) 
     decoder = DecoderWithLatent(timesteps=config['model']['decoder_time'])
     
     loss = SpectralLoss() if config['loss']['type'] == 'spectral' else MultiLoss()
@@ -63,11 +81,12 @@ def make_unsupervised_model(config):
     else:
         tracker_names = ['spec_loss', 'perc_loss', 'total_loss']
     metric_fns = {"F0_recons_L1": f0_midi_scaled_L1_loss}        
-    model = UnsupervisedAutoencoder(preprocessor=preprocessor,
+    model = UnsupervisedAutoencoder(
                                 encoder=encoder,
                                 decoder=decoder,
+                                preprocessor=preprocessor,
                                 loss_fn=loss,
                                 tracker_names=tracker_names,
                                 metric_fns=metric_fns,
                                 add_reverb=config['model']['reverb'])
-    return model        
+    return model   

@@ -3,17 +3,19 @@ from tensorflow.keras import layers as tfkl
 
 from dsp_utils.core import resample
 
+from utilities import at_least_3d
 
 class MLP(tf.keras.Sequential):
     """Stack Dense -> LayerNorm -> Leaky ReLU layers."""  
-    def __init__(self, output_dim=512, n_layers=3, **kwargs):
+    def __init__(self, output_dim=256, n_layers=2, **kwargs):
         layers = []
         for _ in range(n_layers):
             layers.append(tfkl.Dense(output_dim, activation=None))
-            layers.append(tfkl.LayerNormalization(axis=-1))
+            # even though there is a layernorm in the paper,
+            # with it the model in unstable
+            #layers.append(tfkl.LayerNormalization())
             layers.append(tfkl.LeakyReLU())
-        super().__init__(layers, **kwargs)       
-        
+        super().__init__(layers, **kwargs) 
 
 class DecoderWithoutLatent(tfkl.Layer):
     """ Decoder class for loudness and F0. Used in the Supervised setting."""
@@ -65,7 +67,6 @@ class DecoderWithoutLatent(tfkl.Layer):
 class DecoderWithLatent(tfkl.Layer):
     """Decoder class for Z, F0 and l. Used in the Unsupervised Setting."""
     
-    # original rnn_channels=512, mlp_channels=512
     def __init__(self, rnn_channels=512, mlp_channels=512, layers_per_stack=3,
                  harmonic_out_channel=100, noise_out_channel=65,
                  timesteps=1000, **kwargs):
@@ -111,11 +112,3 @@ class DecoderWithLatent(tfkl.Layer):
     def resample(self, x):
         x = at_least_3d(x)
         return resample(x, self.timesteps, method='window')
-
-                       
-def at_least_3d(x):
-    """Optionally adds time, batch, then channel dimension."""
-    x = x[tf.newaxis] if not x.shape else x
-    x = x[tf.newaxis, :] if len(x.shape) == 1 else x
-    x = x[:, :, tf.newaxis] if len(x.shape) == 2 else x
-    return x

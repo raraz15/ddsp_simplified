@@ -15,7 +15,7 @@ class ResidualLayer(tfkl.Layer):
         
         conv1 = tfkl.Conv2D(k_filters, kernel_size=1, strides=1, padding='same', activation=None)
         conv2 = tfkl.Conv2D(k_filters, kernel_size=3, strides=(1, s_freq), padding='same', activation=None)
-        conv3 = tfkl.Conv2D(k_filters*4,    kernel_size=1, strides=1, padding='same', activation=None)
+        conv3 = tfkl.Conv2D(k_filters*4, kernel_size=1, strides=1, padding='same', activation=None)
         
         self.subblock1 = self.create_subblock(conv1)
         self.subblock2 = self.create_subblock(conv2)

@@ -4,7 +4,7 @@ from tensorflow.keras import metrics as tfkm
 
 from synthesizers import *
 
-# TODO: do not save the harmonic and noise to the features??
+
 class Autoencoder(Model):
     def __init__(self,
                preprocessor=None,
@@ -63,11 +63,19 @@ class Autoencoder(Model):
         audio_synth = self.get_audio_from_outputs(model_output)
         return audio_synth.numpy().reshape(-1)    
 
+    # is copying necessary?
+    #def call(self, features):
+    #    _features = features.copy()
+    #    _features = self.encode(_features)
+    #    _features = self.decode(_features)
+    #    outputs = self.dsp_process(_features)       
+    #    return outputs
+
     def call(self, features):
-        _features = features.copy()
-        _features = self.encode(_features)
-        outputs = self.decode(_features)       
-        return outputs
+        features = self.encode(features)
+        features = self.decode(features)
+        outputs = self.dsp_process(features)       
+        return outputs        
   
     @tf.function
     def train_step(self, x):
@@ -97,7 +105,7 @@ class Autoencoder(Model):
     @property
     def metrics(self):
         return self.trackers.trackers.values()
-    
+  
 class SupervisedAutoencoder(Autoencoder):
     def __init__(self,
                preprocessor=None,
@@ -120,25 +128,25 @@ class SupervisedAutoencoder(Autoencoder):
         """Loudness and F0 is read. z is encoded optionally."""
         
         if self.preprocessor is not None: # Downsample and Scale the features
-            features.update(self.preprocessor(features))
+            processed_features = self.preprocessor(features)
+            features.update(processed_features)
         if self.encoder is not None:
-            features.update(self.encoder(features)) 
+            outputs = self.encoder(features)
+            features.update(outputs) 
         return features
     
     def decode(self, features):
         """Map the f,l (,z) parameters to synthesizer parameters."""
         
-        decoder_output = self.decoder(features)       
-        features.update(decoder_output)
-        processed_features = self.dsp_process(features)
-        return processed_features
-    
-# TODO: fix!    
+        outputs = self.decoder(features)       
+        features.update(outputs)
+        return features
+     
 class UnsupervisedAutoencoder(Autoencoder):
     def __init__(self,
+               encoder,
+               decoder,    
                preprocessor=None,
-               encoder=None,
-               decoder=None,
                add_reverb=False,
                loss_fn=None,
                n_samples=64000,
@@ -153,29 +161,17 @@ class UnsupervisedAutoencoder(Autoencoder):
         self.decoder = decoder
 
     def encode(self, features):
-        
-
-        #f0_midi_scaled = self.encoder_f0(features)
-        #features.update({'f0_midi_scaled': f0_midi_scaled})
-        #
-        #z = self.encoder_z(features)
-        #features.update({'z': z})
-        
         if self.preprocessor is not None:
             features.update(self.preprocessor(features))
-
+        outputs = self.encoder(features)
+        features.update(outputs)
         return features
     
     def decode(self, features):  
         """Map the f, l (,z) parameters to synthesizer parameters."""
-        
-        decoder_output = self.decoder(features)   
-        features.update(decoder_output)
-        
-        processed_features = self.dsp_process(features)
-        
-        return processed_features
-
+        output = self.decoder(features)   
+        features.update(output)
+        return features
 
 class TrackerGroup():
     def __init__(self,*names):

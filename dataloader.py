@@ -9,21 +9,6 @@ from feature_extraction import extract_features_from_frames, feature_extractor
 from utilities import frame_generator, load_track
 
 
-def make_supervised_dataset(path, mfcc=False, batch_size=32, sample_rate=16000, normalize=False):
-    """Loads all the mp3 files in the path, creates frames and extracts features."""
-    frames = []
-    for file in glob.glob(path+'/*.mp3'):    
-        track = load_track(file, sample_rate=sample_rate, normalize=normalize)
-        # create 4 seconds long frames
-        frames.append(frame_generator(track, 4*sample_rate))     
-    frames = np.concatenate(frames, axis=0)   
-    trainX, valX = train_test_split(frames)
-    print('Train set size: {}'.format(len(trainX)))
-    print('Val set size: {}'.format(len(valX)))
-    train_features = extract_features_from_frames(trainX, mfcc=mfcc, sample_rate=sample_rate)
-    val_features = extract_features_from_frames(valX, mfcc=mfcc, sample_rate=sample_rate)
-    return _make_dataset(train_features, batch_size), _make_dataset(val_features, batch_size), None
-
 def _make_dataset(features, batch_size=32, seed=None):
     features = Dataset.from_tensor_slices(features)
     features = features.shuffle(len(features)*2, seed, True) # shuflle at each iteration
@@ -31,16 +16,34 @@ def _make_dataset(features, batch_size=32, seed=None):
     features = features.prefetch(1) # preftech 1 batch
     return features
 
-def make_unsupervised_dataset(path, batch_size=32, sample_rate=16000, normalize=False):
+# -------------------------------------------- Supervised Dataset -------------------------------------------------
+
+def make_supervised_dataset(path, mfcc=False, batch_size=32, sample_rate=16000, normalize=False, conf_threshold=0.0):
+    """Loads all the mp3 files in the path, creates frames and extracts features."""
     frames = []
     for file in glob.glob(path+'/*.mp3'):    
         track = load_track(file, sample_rate=sample_rate, normalize=normalize)
-        # create 4 seconds long frames
-        frames.append(frame_generator(track, 4*sample_rate))     
+        frames.append(frame_generator(track, 4*sample_rate)) # create 4 seconds long frames     
     frames = np.concatenate(frames, axis=0)   
     trainX, valX = train_test_split(frames)
-    train_features = extract_features_from_frames(trainX, f0=False, mfcc=True, log_mel=True, sample_rate=sample_rate)
-    val_features = extract_features_from_frames(valX, f0=False, mfcc=True, log_mel=True, sample_rate=sample_rate)
+    print('Train set size: {}\nVal set size: {}'.format(len(trainX),len(valX)))
+    train_features = extract_features_from_frames(trainX, mfcc=mfcc,sample_rate=sample_rate, conf_threshold=conf_threshold)
+    val_features = extract_features_from_frames(valX, mfcc=mfcc, sample_rate=sample_rate, conf_threshold=conf_threshold)
+    return _make_dataset(train_features, batch_size), _make_dataset(val_features, batch_size), None
+
+# -------------------------------------------- Unsupervised Datasets ----------------------------------------------
+
+def make_unsupervised_dataset(path, batch_size=32, sample_rate=16000, normalize=False, conf_threshold=0.0):
+    frames = []
+    for file in glob.glob(path+'/*.mp3'):    
+        track = load_track(file, sample_rate=sample_rate, normalize=normalize)
+        frames.append(frame_generator(track, 4*sample_rate)) # create 4 seconds long frames     
+    frames = np.concatenate(frames, axis=0)   
+    trainX, valX = train_test_split(frames)
+    train_features = extract_features_from_frames(trainX, f0=False, mfcc=True, log_mel=True,
+                                                sample_rate=sample_rate, conf_threshold=conf_threshold)
+    val_features = extract_features_from_frames(valX, f0=False, mfcc=True, log_mel=True,
+                                                sample_rate=sample_rate, conf_threshold=conf_threshold)
     return _make_dataset(train_features, batch_size), _make_dataset(val_features, batch_size), None    
 
 #/scratch/users/hbalim15/tensorflow_datasets/nsynth/
@@ -53,18 +56,13 @@ def make_nsynth_dataset(batch_size, path='nsynth/gansynth_subset.f0_and_loudness
                                             split=split).prefetch(1).map(lambda x: preprocess_ex(x))
     return train_set, val_set, test_set
 
-def preprocess_ex(ex):
-    #'instrument_source': ex['instrument']['source'],
-    #'instrument_family': ex['instrument']['family'],
-    #'instrument': ex['instrument']['label'],
-    #'f0_confidence': ex['f0']['confidence'],    
+def preprocess_ex(ex):   
     dct = {'pitch': ex['pitch'],  
           'f0_hz': ex['f0']['hz'],
           'loudness_db': ex['loudness']['db']}
     dct.update(feature_extractor(ex['audio'], sample_rate=16000, frame_rate=250,
                         f0=False, mfcc=True, log_mel=True))
     return dct  
-
 
 
 #import tensorflow as tf

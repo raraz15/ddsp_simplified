@@ -1,4 +1,3 @@
-import tensorflow as tf
 from tensorflow.keras import layers as tfkl
 
 from dsp_utils import spectral_ops
@@ -7,6 +6,7 @@ from dsp_utils.core import resample, midi_to_hz, hz_to_midi
 F0_RANGE = spectral_ops.F0_RANGE
 LD_RANGE = spectral_ops.LD_RANGE
 
+from utilities import at_least_3d
 
 class F0LoudnessPreprocessor(tfkl.Layer):
     """Resamples and scales 'f0_hz' and 'loudness_db' features. Used in the Supervised Setting."""
@@ -33,6 +33,31 @@ class F0LoudnessPreprocessor(tfkl.Layer):
     def resample(self, x):
         x = at_least_3d(x)
         return resample(x, self.timesteps, method="linear")        
+
+
+class UnsupervisedPreprocessor(tfkl.Layer):
+
+    def __init__(self, timesteps=1000, **kwargs):
+        super().__init__(**kwargs)
+        self.timesteps = timesteps
+
+    def call(self, inputs):
+
+        loudness_db, mfcc, log_mel = inputs["loudness_db"], inputs["mfcc"], inputs["log_mel"]
+
+        # Resample features to time_steps.
+        loudness_db = self.resample(loudness_db)
+        mfcc = self.resample(mfcc)
+        log_mel = self.resample(log_mel)
+
+        # For NN training, scale frequency and loudness to the range [0, 1].
+        ld_scaled = (loudness_db / LD_RANGE) + 1.0
+
+        return {'mfcc': mfcc, 'log_mel':log_mel, "ld_scaled":ld_scaled}
+        
+    def resample(self, x):
+        x = at_least_3d(x)
+        return resample(x, self.timesteps, method="linear")
 
 
 class MidiF0LoudnessPreprocessor(tfkl.Layer):
@@ -64,10 +89,3 @@ class MidiF0LoudnessPreprocessor(tfkl.Layer):
     def resample(self, x):
         x = at_least_3d(x)
         return resample(x, self.timesteps, method="linear") 
-    
-def at_least_3d(x):
-    """Optionally adds time, batch, then channel dimension."""
-    x = x[tf.newaxis] if not x.shape else x
-    x = x[tf.newaxis, :] if len(x.shape) == 1 else x
-    x = x[:, :, tf.newaxis] if len(x.shape) == 2 else x
-    return x
