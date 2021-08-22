@@ -33,15 +33,23 @@ class UnsupervisedEncoder(tfkl.Layer):
         self.timesteps = timesteps
         
         self.encoder_z = Encoder_z(rnn_channels, z_dims)
-        self.encoder_f = Encoder_f(timesteps=timesteps)
-        #l is extracted in the dataset
+        self.encoder_f = Encoder_f() #timesteps=timesteps
+        #l is extracted in the dataset, normalized in the preprocessor
         
     # f0_midi_scaled ???????????
     def call(self, features):
         
         z = self.encoder_z(features)
+
+        print('z: {}'.format(z.shape))
+
         ld_scaled = features['ld_scaled']
+
+        print('ld_scaled: {}'.format(ld_scaled.shape))
         f0_hz = self.encoder_f(features)
+
+        print('f0_hz: {}'.format(f0_hz))
+
         f0_midi_scaled = hz_to_midi(f0_hz) / F0_RANGE         
         
         return {'z': z,
@@ -72,52 +80,68 @@ class Encoder_z(tfkl.Layer):
         z = self.dense_z(z)
         return z         
 
+# # upsampling fails
 # MIDI Scaling??
 # compute unit midi??
 class Encoder_f(tfkl.Layer):
     
-    def __init__(self, timesteps=1000):
+    def __init__(self, timesteps=250):
         super().__init__(name='f_encoder')
         self.timesteps = timesteps
         self.resnet = ResNet()
-        self.reshape = tfkl.Reshape((-1, self.timesteps, 2048))
+
+        self.reshape0 = tfkl.Reshape((125, 1, 8*1024))
+
         self.freq_out = tfkl.Dense(128)
 
         self.freq_scale = tf.convert_to_tensor(440* 2**((np.arange(0,128)-69)/12), dtype=tf.float32)
           
     def call(self, features):
 
-        
-
-        log_mel = features['log_mel'][:,:,:,tf.newaxis] # N, T, 64, 1
-        print(log_mel.shape)
-
+        log_mel = features['log_mel'][:,:,:,tf.newaxis] # N, T, 229, 1
         resnet_out = self.resnet(log_mel)
-        print('resnet out {}'.format(resnet_out.shape))
 
-        resnet_out = self.reshape(resnet_out)
-        #resnet_out = tf.reshape(resnet_out, shape=tf.constant([int(tf.shape(resnet_out)[0]), int(tf.shape(resnet_out)[1]), -1]))
-        #resnet_out = tf.reshape(resnet_out, shape=tf.constant([None, int(resnet_out.shape[1]), -1]))
-        print(resnet_out.shape)
-        
+        # # Collapse the frequency dimension.
+        # tf reshape is a terrible thing and I've avoided it with a reshape layer
+        resnet_out = self.reshape0(resnet_out)
+
+        # should be T, 1, 128
         freq_weights = self.freq_out(resnet_out)
-        print('freq')
-        print(freq_weights.shape)
+        print('freq_weights: {}'.format(freq_weights.shape))
+
+        # Not sure about the order because,
+        # 1) upsampling should be done once here and once in decoder?
+        # 2) then where is the softplus and normalize ?
+        # 3) what is _compute_unit_midi ?
+
+        freq_weights = self.resample(freq_weights)
+        print('freq_weights resampled: {}'.format(freq_weights.shape))        
+
+
+        # Softplus and normalize
         freq_weights = tf.nn.softplus(freq_weights) + 1e-3
-        freq_weights = freq_weights / tf.reduce_sum(freq_weights, axis=-1, keepdims=True)
-        f0s = self._compute_unit_midi(freq_weights)
-        f0s = self.resample(f0s)
-        return tf.math.reduce_sum(f0s * self.freq_scale,axis=-1)
+        freq_weights /= tf.reduce_sum(freq_weights, axis=-1, keepdims=True)
+
+        print('freq_weights soft, norm: {}'.format(freq_weights.shape))
+
+        f0s = tf.math.reduce_sum(freq_weights * self.freq_scale,axis=-1)
+        print('f0s: {}'.format(f0s.shape))
+
+
+        #f0s = self.resample(f0s)
+        #print('f0s resampled: {}'.format(f0s.shape))        
+
+        return f0s
     
-    def _compute_unit_midi(self, probs):
-        # probs: [B, T, D]
-        depth = int(tf.shape(probs)[-1])
-        #unit_midi_bins = tf.constant(1.0 * tf.reshape(tf.range(depth), (1, 1, -1)) / depth, dtype=tf.float32)  # [1, 1, D]
-        unit_midi_bins = tf.reshape(tf.range(depth), (1, 1, -1)) / depth
-        unit_midi_bins = tf.cast(unit_midi_bins,tf.float32)
-        f0_unit_midi = tf.reduce_sum(unit_midi_bins * probs, axis=-1, keepdims=True)  # [B, T, 1]
-        return f0_unit_midi    
+    #def _compute_unit_midi(self, probs):
+    #    # probs: [B, T, D]
+    #    depth = int(tf.shape(probs)[-1])
+    #    #unit_midi_bins = tf.constant(1.0 * tf.reshape(tf.range(depth), (1, 1, -1)) / depth, dtype=tf.float32)  # [1, 1, D]
+    #    unit_midi_bins = tf.reshape(tf.range(depth), (1, 1, -1)) / depth
+    #    unit_midi_bins = tf.cast(unit_midi_bins,tf.float32)
+    #    f0_unit_midi = tf.reduce_sum(unit_midi_bins * probs, axis=-1, keepdims=True)  # [B, T, 1]
+    #    return f0_unit_midi    
             
     def resample(self, x):
         x = at_least_3d(x)
-        return resample(x, self.timesteps, method="linear")        
+        return resample(x, self.timesteps, method="window")        

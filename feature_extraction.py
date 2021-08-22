@@ -6,52 +6,49 @@ from utilities import concat_dct, frame_generator
 
 ## -------------------------------------------------- Feature Extraction ---------------------------------------
 
-# TODO: decide on nffts
-def feature_extractor(audio_frame, sample_rate=16000, frame_rate=250,
+
+def feature_extractor(audio, sample_rate=16000, model=None, frame_rate=250,
                     f0=True, loudness=True, mfcc=False, log_mel=False,
-                    l_nfft=2048,mfcc_nfft=1024, logmel_nfft=2048,
-                    model=None, conf_threshold=0.0):
-    """Extracts features for a single frame."""
-    
-    features = {'audio': audio_frame}
+                    mfcc_nfft=1024, l_nfft=2048, logmel_nfft=2048,
+                    conf_threshold=0.0):
+    """
+    mfcc_nfft should be determined by preprocessing timesteps.
+    l_nfft and log_mel nfft are used as here in the library."""
+
+    features = {'audio': audio}
 
     if f0:
-        f0, confidence = compute_f0(audio_frame, sample_rate, frame_rate, viterbi=True) 
+        f0, confidence = compute_f0(audio, sample_rate, frame_rate, viterbi=True) 
         f0 = confidence_filter(f0, confidence, conf_threshold)
         features['f0_hz'] = f0
 
     if mfcc:
         # overlap and fft_size taken from the code
-        features['mfcc'] = compute_mfcc(audio_frame,
-                                        lo_hz=20.0,
-                                        hi_hz=8000.0,
+        # overlap is the same except for frame size 63
+        features['mfcc'] = compute_mfcc(audio,
                                         fft_size=mfcc_nfft,
                                         overlap=0.75,
                                         mel_bins=128,
                                         mfcc_bins=30)
 
     if log_mel:
-        features['log_mel'] = compute_logmel(audio_frame,
-                                            lo_hz=80.0,
-                                            hi_hz=7600.0,
-                                            bins=64,
+        features['log_mel'] = compute_logmel(audio,
+                                            bins=229, #64
                                             fft_size=logmel_nfft,
                                             overlap=0.75,
                                             pad_end=True,
                                             sample_rate=sample_rate)
                                                                              
     if loudness:                                            
-        # apply reverb before l extraction to match room acoustics
-        # used during timbre transfer
+        # apply reverb before l extraction to match
+        # room acoustics for timbre transfer
         if model is not None and model.add_reverb: 
-            audio_frame = model.reverb({"audio_synth":audio_frame[np.newaxis,:]})[0]
+            audio = model.reverb({"audio_synth":audio[np.newaxis,:]})[0]
 
-        features['loudness_db'] = compute_loudness(audio_frame,
+        features['loudness_db'] = compute_loudness(audio,
                                                     sample_rate=sample_rate,
                                                     frame_rate=frame_rate,
                                                     n_fft=l_nfft,
-                                                    range_db=120.0,
-                                                    ref_db=20.7,
                                                     use_tf=False)                             
     return features
 

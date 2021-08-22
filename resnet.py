@@ -1,64 +1,72 @@
+import tensorflow as tf
 import tensorflow.keras.layers as tfkl
-from tensorflow.keras.models import Sequential
+#from tensorflow.keras.models import Sequential
+
+from utilities import ensure_4d
+
+
+class NormReluConv(tf.keras.Sequential):
+  """Norm -> ReLU -> Conv layer."""
+
+  def __init__(self, ch, k, s, **kwargs):
+    """Downsample frequency by stride."""
+    layers = [
+        tfkl.LayerNormalization(),
+        tfkl.Activation(tf.nn.relu),
+        tfkl.Conv2D(ch, (k, k), (1, s), padding='same')
+    ]
+    super().__init__(layers, **kwargs)
 
 
 class ResidualLayer(tfkl.Layer):
-    
-    def __init__(self, k_filters, s_freq=1, shortcut=True, use_norm=True, name='ResLayer'):
-        super().__init__(name=name)
-        
-        self.layer_norm = tfkl.LayerNormalization
-        self.act = tfkl.Activation('relu')
-        
-        self.use_norm = use_norm
-        self.shortcut = shortcut
-        
-        conv1 = tfkl.Conv2D(k_filters, kernel_size=1, strides=1, padding='same', activation=None)
-        conv2 = tfkl.Conv2D(k_filters, kernel_size=3, strides=(1, s_freq), padding='same', activation=None)
-        conv3 = tfkl.Conv2D(k_filters*4, kernel_size=1, strides=1, padding='same', activation=None)
-        
-        self.subblock1 = self.create_subblock(conv1)
-        self.subblock2 = self.create_subblock(conv2)
-        self.subblock3 = self.create_subblock(conv3)
-        
-        if self.shortcut:
-            res_conv = tfkl.Conv2D(k_filters*4, kernel_size=1, strides=(1, s_freq), padding='same', activation=None)
-            self.subblock_res = self.create_subblock(res_conv)
+    """A single layer for ResNet, with a bottleneck."""
 
-        
-    def call(self, x):
-        
-        h = x
-        
-        x = self.subblock1(x)
-        x = self.subblock2(x)
-        x = self.subblock3(x)
+    def __init__(self, ch, stride=1, shortcut=True):
+        super().__init__(name='ResLayer')
+        ch_out = 4 * ch
+        self.shortcut = shortcut
+
+        self.norm_input = tfkl.LayerNormalization()
+
         if self.shortcut:
-            h = self.subblock_res(h)
-        
-        return h + x
-    
-    def create_subblock(self, conv):    
-        if self.use_norm:
-            return Sequential([self.layer_norm(), self.act, conv])
-        else:
-            return Sequential([self.act, conv])
+            self.conv_proj = tfkl.Conv2D(ch_out, (1, 1), (1, stride), padding='same', name='conv_proj')
+        layers = [
+            tfkl.Conv2D(ch, (1, 1), (1, 1), padding='same'),
+            NormReluConv(ch, 3, stride),
+            NormReluConv(ch_out, 1, 1),
+        ]
+        self.bottleneck = tf.keras.Sequential(layers, name='bottleneck')        
+             
+    def call(self, inputs):
+        x = inputs
+        r = x
+
+        x = ensure_4d(x)
+        x = tf.nn.relu(self.norm_input(x))
+
+        # The projection shortcut should come after the first norm and ReLU
+        # since it performs a 1x1 convolution.
+        r = self.conv_proj(x) if self.shortcut else r
+        x = self.bottleneck(x)
+        return x + r
         
         
 class ResidualStack(tfkl.Layer):
+    """LayerNorm -> ReLU -> Conv layer."""
+
     def __init__(self,
                filters,
                block_sizes,
                strides,
-               use_norm,
                **kwargs):
         super().__init__(**kwargs)
         layers = []
         for (ch, n_layers, stride) in zip(filters, block_sizes, strides):
-            
-            layers.append(ResidualLayer(ch, stride, True, use_norm))
+            # Only the first block per residual_stack uses shortcut and strides.
+            layers.append(ResidualLayer(ch, stride, shortcut=True))
+            # Add the additional (n_layers - 1) layers to the stack.
             for _ in range(1, n_layers):
-                layers.append(ResidualLayer(ch, 1, False, use_norm))
+                layers.append(ResidualLayer(ch, 1, shortcut=False))
                               
         layers.append(tfkl.LayerNormalization())
         layers.append(tfkl.Activation("relu"))
@@ -66,7 +74,6 @@ class ResidualStack(tfkl.Layer):
 
     def __call__(self, inputs):
         x = inputs
-
         for layer in self.layers:
             x = layer(x)
         return x
@@ -74,13 +81,13 @@ class ResidualStack(tfkl.Layer):
     
 class ResNet(tfkl.Layer):
 
-    def __init__(self, ch=32, use_norm=True, blocks=[3,4,6], **kwargs):
+    def __init__(self, ch=32, blocks=[3,4,6], **kwargs): #, use_norm=True
         super().__init__(**kwargs)
         self.layers = [
             tfkl.Conv2D(64, (7, 7), (1, 2), padding='same'),
             tfkl.MaxPool2D(pool_size=(1, 3), strides=(1, 2), padding='same'),
-            ResidualStack([ch, 2 * ch, 4 * ch], blocks, [1, 2, 2], use_norm),
-            ResidualStack([8 * ch], [3], [2], use_norm)
+            ResidualStack([ch, 2*ch, 4*ch], blocks, [1, 2, 2]), #, use_norm
+            ResidualStack([8 * ch], [3], [2]) #, use_norm
         ]
 
     def __call__(self, inputs):

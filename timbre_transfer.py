@@ -23,6 +23,7 @@ def transfer_timbre_from_path(model, path, sample_rate=16000,
     transfered_track = model.transfer_timbre(features)
     return transfered_track
 
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Timbre Transfer Parameters.')
@@ -31,7 +32,6 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--output-dir', type=str, default='', help='Output audio directory.')
     parser.add_argument('-p', '--pitch-shift', type=int, default=0, help='Semi tones pitch shift.')
     parser.add_argument('-s', '--scale-loudness', type=int, default=0, help='Loudness scale.')
-    parser.add_argument('-n', '--normalize', default=False, action='store_true', help='Normalize audio.')
     args = parser.parse_args()    
 
     with open(args.config_path, 'r') as file:
@@ -47,13 +47,14 @@ if __name__ == "__main__":
                                                 scale_loudness=args.scale_loudness,
                                                 mfcc=config['model']['encoder'],
                                                 frame_rate=config['data']['preprocessing_time'],
-                                                normalize=args.normalize)
+                                                normalize=config['data']['normalize'])
     print('Timbre transfered.')
     print('Writing audio.')
 
     output_dir = args.output_dir
     if not output_dir:
-        output_dir =  os.path.join('audio_clips','outputs',config['run_name'])
+        output_dir =  os.path.join('audio_clips','Outputs', 'DDSP_Violin', config['run_name'])
+        #'DDSP_'+config['data']['instrument']
     os.makedirs(output_dir, exist_ok=True)
     input_name = os.path.basename(args.audio_path)
     output_name = os.path.splitext(input_name)[0]+'-timbre_transfered.wav'
@@ -62,7 +63,7 @@ if __name__ == "__main__":
     write_audio(transfered_track,
                 output_path,
                 sample_rate=config['data']['sample_rate'],
-                normalize=args.normalize)
+                normalize=config['data']['normalize'])
                 
     # Save the config next to the audio file
     with open(os.path.join(output_dir, 'model.yaml'), 'w') as f:

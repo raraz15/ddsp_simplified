@@ -12,6 +12,15 @@ def at_least_3d(x):
     x = x[:, :, newaxis] if len(x.shape) == 2 else x
     return x
 
+def ensure_4d(x):
+  """Add extra dimensions to make sure tensor has height and width."""
+  if len(x.shape) == 2:
+    return x[:, newaxis, newaxis, :]
+  elif len(x.shape) == 3:
+    return x[:, :, newaxis, :]
+  else:
+    return x    
+
 def concat_dct(dcts):
     return {k:  np.array([dct[k] for dct in dcts]) for k in dcts[0].keys()}
 

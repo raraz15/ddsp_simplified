@@ -18,8 +18,10 @@ def _make_dataset(features, batch_size=32, seed=None):
 
 # -------------------------------------------- Supervised Dataset -------------------------------------------------
 
-def make_supervised_dataset(path, mfcc=False, batch_size=32, sample_rate=16000, normalize=False, conf_threshold=0.0):
+def make_supervised_dataset(path, mfcc=False, batch_size=32, sample_rate=16000,
+                            normalize=False, conf_threshold=0.0, mfcc_nfft=1024):
     """Loads all the mp3 files in the path, creates frames and extracts features."""
+
     frames = []
     for file in glob.glob(path+'/*.mp3'):    
         track = load_track(file, sample_rate=sample_rate, normalize=normalize)
@@ -27,13 +29,15 @@ def make_supervised_dataset(path, mfcc=False, batch_size=32, sample_rate=16000, 
     frames = np.concatenate(frames, axis=0)   
     trainX, valX = train_test_split(frames)
     print('Train set size: {}\nVal set size: {}'.format(len(trainX),len(valX)))
-    train_features = extract_features_from_frames(trainX, mfcc=mfcc,sample_rate=sample_rate, conf_threshold=conf_threshold)
-    val_features = extract_features_from_frames(valX, mfcc=mfcc, sample_rate=sample_rate, conf_threshold=conf_threshold)
+    train_features = extract_features_from_frames(trainX, mfcc=mfcc, sample_rate=sample_rate,
+                                                conf_threshold=conf_threshold, mfcc_nfft=mfcc_nfft)
+    val_features = extract_features_from_frames(valX, mfcc=mfcc, sample_rate=sample_rate,
+                                                conf_threshold=conf_threshold, mfcc_nfft=mfcc_nfft)
     return _make_dataset(train_features, batch_size), _make_dataset(val_features, batch_size), None
 
 # -------------------------------------------- Unsupervised Datasets ----------------------------------------------
 
-def make_unsupervised_dataset(path, batch_size=32, sample_rate=16000, normalize=False, conf_threshold=0.0):
+def make_unsupervised_dataset(path, batch_size=32, sample_rate=16000, normalize=False, frame_rate=250):
     frames = []
     for file in glob.glob(path+'/*.mp3'):    
         track = load_track(file, sample_rate=sample_rate, normalize=normalize)
@@ -41,9 +45,9 @@ def make_unsupervised_dataset(path, batch_size=32, sample_rate=16000, normalize=
     frames = np.concatenate(frames, axis=0)   
     trainX, valX = train_test_split(frames)
     train_features = extract_features_from_frames(trainX, f0=False, mfcc=True, log_mel=True,
-                                                sample_rate=sample_rate, conf_threshold=conf_threshold)
+                                                sample_rate=sample_rate, frame_rate=frame_rate)
     val_features = extract_features_from_frames(valX, f0=False, mfcc=True, log_mel=True,
-                                                sample_rate=sample_rate, conf_threshold=conf_threshold)
+                                                sample_rate=sample_rate, frame_rate=frame_rate)
     return _make_dataset(train_features, batch_size), _make_dataset(val_features, batch_size), None    
 
 #/scratch/users/hbalim15/tensorflow_datasets/nsynth/

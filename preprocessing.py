@@ -34,32 +34,33 @@ class F0LoudnessPreprocessor(tfkl.Layer):
         x = at_least_3d(x)
         return resample(x, self.timesteps, method="linear")        
 
+# TODO: fix the Encoder_f
+# Downsample the f and l using the F0LoudnessPreprocessor
+# Remove this class
+class LoudnessPreprocessor(tfkl.Layer):
 
-class UnsupervisedPreprocessor(tfkl.Layer):
-
-    def __init__(self, timesteps=1000, **kwargs):
+    def __init__(self, timesteps=250, **kwargs):
         super().__init__(**kwargs)
         self.timesteps = timesteps
 
     def call(self, inputs):
 
-        loudness_db, mfcc, log_mel = inputs["loudness_db"], inputs["mfcc"], inputs["log_mel"]
+        loudness_db = inputs["loudness_db"]
 
         # Resample features to time_steps.
         loudness_db = self.resample(loudness_db)
-        mfcc = self.resample(mfcc)
-        log_mel = self.resample(log_mel)
 
         # For NN training, scale frequency and loudness to the range [0, 1].
         ld_scaled = (loudness_db / LD_RANGE) + 1.0
 
-        return {'mfcc': mfcc, 'log_mel':log_mel, "ld_scaled":ld_scaled}
+        return {"ld_scaled":ld_scaled}
         
     def resample(self, x):
         x = at_least_3d(x)
         return resample(x, self.timesteps, method="linear")
 
 
+# TODO: delete??
 class MidiF0LoudnessPreprocessor(tfkl.Layer):
     """Scales the loudness, converts scaled midi to hz and resamples. Used in the Unsupervised setting."""
 

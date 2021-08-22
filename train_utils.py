@@ -3,7 +3,7 @@ import os
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.optimizers.schedules import ExponentialDecay 
 
-from preprocessing import F0LoudnessPreprocessor, UnsupervisedPreprocessor
+from preprocessing import F0LoudnessPreprocessor, LoudnessPreprocessor
 from encoders import SupervisedEncoder, UnsupervisedEncoder
 from models import SupervisedAutoencoder, UnsupervisedAutoencoder
 from decoders import DecoderWithoutLatent, DecoderWithLatent
@@ -12,14 +12,35 @@ from callbacks import ModelCheckpoint, CustomWandbCallback
 
 from metrics import f0_midi_scaled_L1_loss #????
 
+from dataloader import make_supervised_dataset, make_unsupervised_dataset
 
-# REMOVE ?
-def make_compiled_supervised_model(config):   
-    model = make_supervised_model(config)
-    optimizer = make_optimizer(config)
-    model.compile(optimizer)
-    model.load_weights(config['model']['path'])
-    return model  
+# -------------------------------------- Models -------------------------------------------------
+
+# TODO: enc, dec params
+# TODO metric fns
+# preprocessor ? 
+def make_unsupervised_model(config):
+
+    preprocessor = LoudnessPreprocessor(timesteps=config['data']['preprocessing_time'])
+
+    encoder = UnsupervisedEncoder(timesteps=config['data']['preprocessing_time']) 
+    decoder = DecoderWithLatent(timesteps=config['model']['decoder_time'])
+    
+    loss = SpectralLoss() if config['loss']['type'] == 'spectral' else MultiLoss()
+    if loss.name== 'spectral_loss':
+        tracker_names = ['spec_loss']
+    else:
+        tracker_names = ['spec_loss', 'perc_loss', 'total_loss']
+    metric_fns = {"F0_recons_L1": f0_midi_scaled_L1_loss}        
+    model = UnsupervisedAutoencoder(
+                                encoder=encoder,
+                                decoder=decoder,
+                                preprocessor=preprocessor,
+                                loss_fn=loss,
+                                tracker_names=tracker_names,
+                                metric_fns=metric_fns,
+                                add_reverb=config['model']['reverb'])
+    return model
 
 def make_supervised_model(config):
     """Creates the necessary components of a supervised ddsp using the config."""
@@ -39,11 +60,15 @@ def make_supervised_model(config):
                                 add_reverb=config['model']['reverb'])
     return model
 
+# -------------------------------------- Optimizer -------------------------------------------------
+
 def make_optimizer(config):
     optimizer = Adam(learning_rate=ExponentialDecay(config['optimizer']['lr'],
                                 decay_steps=config['optimizer']['decay_steps'],
                                 decay_rate=config['optimizer']['decay_rate']))    
     return optimizer                                    
+
+# -------------------------------------- Callbacks -------------------------------------------------
 
 def create_callbacks(config, monitor):
     # It looks ugly, but is necessary
@@ -63,30 +88,26 @@ def create_callbacks(config, monitor):
             model_dir = os.path.join(wandb_callback.wandb_run_dir, config['run_name'])
             callbacks = [ModelCheckpoint(save_dir=model_dir, monitor=monitor),
                         wandb_callback]
-    return callbacks  
+    return callbacks
 
-# TODO: enc, dec params
-# TODO metric fns
-# preprocessor ? 
-def make_unsupervised_model(config):
+# -------------------------------------- Datasets -------------------------------------------------      
 
-    preprocessor = UnsupervisedPreprocessor(timesteps=config['data']['preprocessing_time'])
+def make_supervised_dataset_from_config(config):
+    try: # deal with no mfcc_nfft control versions 
+        mfcc_nfft = config['data']['mfcc_nfft']
+    except:
+        mfcc_nfft = 1024
+    return make_supervised_dataset(config['data']['path'],
+                                mfcc=config['model']['encoder'],
+                                mfcc_nfft=mfcc_nfft,
+                                batch_size=config['training']['batch_size'],
+                                sample_rate=config['data']['sample_rate'],
+                                normalize=config['data']['normalize'],
+                                conf_threshold=config['data']['confidence_threshold'])  
 
-    encoder = UnsupervisedEncoder(timesteps=config['data']['preprocessing_time']) 
-    decoder = DecoderWithLatent(timesteps=config['model']['decoder_time'])
-    
-    loss = SpectralLoss() if config['loss']['type'] == 'spectral' else MultiLoss()
-    if loss.name== 'spectral_loss':
-        tracker_names = ['spec_loss']
-    else:
-        tracker_names = ['spec_loss', 'perc_loss', 'total_loss']
-    metric_fns = {"F0_recons_L1": f0_midi_scaled_L1_loss}        
-    model = UnsupervisedAutoencoder(
-                                encoder=encoder,
-                                decoder=decoder,
-                                preprocessor=preprocessor,
-                                loss_fn=loss,
-                                tracker_names=tracker_names,
-                                metric_fns=metric_fns,
-                                add_reverb=config['model']['reverb'])
-    return model   
+def make_unsupervised_dataset_from_config(config):
+    return make_unsupervised_dataset(config['data']['path'],
+                                batch_size=config['training']['batch_size'],
+                                sample_rate=config['data']['sample_rate'],
+                                normalize=config['data']['normalize'],
+                                frame_rate=config['data']['preprocessing_time']) 

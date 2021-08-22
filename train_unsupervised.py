@@ -7,6 +7,8 @@ from tensorflow.keras.optimizers.schedules import ExponentialDecay
 from dataloader import make_unsupervised_dataset, make_nsynth_dataset # ??
 from train_utils import create_callbacks, make_unsupervised_model
 
+# DOESN'T WORK AT THE MOMENT
+
 # TODO: nsynth dataset
 if __name__ == '__main__':
     
