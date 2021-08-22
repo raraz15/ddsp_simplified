@@ -149,7 +149,7 @@ data/**
 logs/**
 model_checkpoints/**
 audio_clips/**
-configs/**
+#configs/**
 
 *.txt
 *.wav

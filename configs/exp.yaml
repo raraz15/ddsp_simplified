@@ -1,0 +1,31 @@
+run_name: exp
+# Leave empty for not using wandb
+wandb:
+  project_name: Supervised_Violin
+data:
+  path: /kuacc/users/hbalim15/ddsp/audio_clips/Violin
+  # Frame rate at the encoder
+  preprocessing_time: 250
+  sample_rate: 16000
+model:
+  type: Supervised
+  # Frame rate at the decoder
+  decoder_time: 1000
+  # Use the z encoder or not
+  encoder: False
+  # Whether to use the reverb module
+  reverb: True
+  # Directory to save the model in
+  # leave empty for auto 
+  dir:  
+loss:
+  type: spectral
+  logmag_weight: 1.0
+optimizer:
+  name: Adam
+  decay_rate: 0.98
+  decay_steps: 10000
+  lr: 0.001
+training:
+  batch_size: 32
+  epochs: 10
