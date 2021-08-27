@@ -12,5 +12,7 @@ Training the Supervised and Unsupervised autoencoders can be done using the trai
 
 After you have a trained model, you can perform timbre transfer using the timbre_transfer.py file.
 
-Currently the unsupervised part requires more work to be done.
+Currently the unsupervised part requires more work to be done to implement the architecture described in the paper.
+
+If you are from the Google Magenta team and you are unhappy about the existence of this repository, please contact us and we can solve it together.
 
