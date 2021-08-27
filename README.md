@@ -1,4 +1,4 @@
-# ddsp
+# ddsp_simplified
 
 This project was done for the Deep Unsuperised Learning COMP447 course at Koç University in Spring'21 by Recep Oğuz Araz raraz15@ku.edu.tr and Haldun Balım hbalim15@ku.edu.tr.
 
