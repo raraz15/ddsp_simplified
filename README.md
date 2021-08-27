@@ -2,6 +2,8 @@
 
 This project was done for the Deep Unsuperised Learning COMP447 course at Koç University in Spring'21 by Recep Oğuz Araz raraz15@ku.edu.tr and Haldun Balım hbalim15@ku.edu.tr.
 
+The code here is mostly taken from https://github.com/magenta/ddsp the original DDSP repository.
+
 We implemented the Supervised and Unsupervised DDSP Autoencoders, trained and compared their performances.
 
 The goal was to have an easy to use DDSP implementation that is stripped from the cool but hard to understand parts of the original library.
