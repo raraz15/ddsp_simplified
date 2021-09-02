@@ -155,3 +155,6 @@ audio_clips/**
 
 # jetbrains stuff
 .idea
+
+/cache
+!/cache/.gitkeep
