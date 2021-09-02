@@ -151,7 +151,6 @@ model_checkpoints/**
 audio_clips/**
 #configs/**
 
-*.txt
 *.wav
 
 # jetbrains stuff
