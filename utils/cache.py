@@ -1,3 +1,4 @@
+import os
 import pathlib
 from typing import Optional
 
@@ -18,7 +19,7 @@ class Cache:
         return cls._instance
 
     def __init__(self):
-        self._cache_dir_path: str = str(pathlib.Path(__file__).parent.resolve())
+        self._cache_dir_path: str = str(pathlib.Path(__file__).parent.parent.resolve()) + '/cache'
 
     def put_numpy_array(self, key: str, data: np.ndarray) -> None:
 
@@ -40,5 +41,13 @@ class Cache:
 
         return np.load(self._generate_file_name_of_numpy_array(key))
 
+    def delete_numpy_array(self, key: str):
+        if not self.has_numpy_array(key):
+            raise Exception(f'numpy array with the key {key} not fund in this cache')
+
+        os.remove(self._generate_file_name_of_numpy_array(key))
+
+
+
     def _generate_file_name_of_numpy_array(self, external_key: str) -> str:
-        return self._cache_dir_path + '/numpy_arrays/' + external_key + '.numpy_ndarray'
+        return self._cache_dir_path + '/numpy_arrays_' + external_key + '.npy'
