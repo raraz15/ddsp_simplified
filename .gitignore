@@ -153,3 +153,6 @@ audio_clips/**
 
 *.txt
 *.wav
+
+# jetbrains stuff
+.idea
