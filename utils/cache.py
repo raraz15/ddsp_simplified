@@ -1,6 +1,6 @@
 import os
 import pathlib
-from typing import Optional
+from typing import Optional, Type
 
 import numpy as np
 from pathlib import Path
@@ -13,7 +13,7 @@ class Cache:
     _instance = None  # type: Optional[Cache]
 
     @classmethod
-    def get_instance(cls):  # type: (Cache) -> Cache
+    def get_instance(cls):  # type: (Type[Cache]) -> Cache
         if cls._instance is None:
             cls._instance = Cache()
         return cls._instance
@@ -46,8 +46,6 @@ class Cache:
             raise Exception(f'numpy array with the key {key} not fund in this cache')
 
         os.remove(self._generate_file_name_of_numpy_array(key))
-
-
 
     def _generate_file_name_of_numpy_array(self, external_key: str) -> str:
         return self._cache_dir_path + '/numpy_arrays_' + external_key + '.npy'
