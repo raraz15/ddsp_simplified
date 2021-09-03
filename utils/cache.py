@@ -53,4 +53,4 @@ class Cache:
         os.remove(self._generate_file_name_of_numpy_array(key))
 
     def _generate_file_name_of_numpy_array(self, external_key: str) -> str:
-        return self._cache_dir_path + '/data/numpy_arrays_' + external_key + '.npy'
+        return self._cache_dir_path + '/data/numpy_array_' + external_key + '.npy'

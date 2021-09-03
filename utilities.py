@@ -1,9 +1,14 @@
+from hashlib import md5
+
 import numpy as np
 from scipy.io.wavfile import write
 
 import librosa
 
 from tensorflow import newaxis
+
+from utils.cache import Cache
+
 
 def at_least_3d(x):
     """Optionally adds time, batch, then channel dimension."""
@@ -27,13 +32,40 @@ def concat_dct(dcts):
 def frame_generator(track, frame_size=64000):
     return track[:len(track)-len(track)%frame_size].reshape(-1, frame_size)
 
+
+def _generate_cache_key_for_audio(path: str, sample_rate: int, pitch_shift: int, normalize: bool) -> str:
+    return f"{md5(path.encode('utf-8')).hexdigest()}-{sample_rate}-{pitch_shift}-{normalize}"
+
+
+
 def load_track(path, sample_rate=16000, pitch_shift=0, normalize=False):
-    """pitch_shift in semitones."""
+    """
+    Return uncompressed audio after sample rate conversion and some other manipulations.
+
+    Additionally, uses caching.
+
+    Args:
+        path (str): path to the compressed file
+        sample_rate (int): sample rate to convert the resulting audio to
+        pitch_shift (int): pitch shift to apply, in semitones
+        normalize (bool): whether to apply normalization
+
+    Returns:
+        np.ndarray: the raw uncompressed 1-channel audio with applicable processing.
+    """
+
+    cache_key = _generate_cache_key_for_audio(path, sample_rate, pitch_shift, normalize)
+    if Cache.get_instance().has_numpy_array(cache_key):
+        return Cache.get_instance().get_numpy_array(cache_key)
+
     track, _ = librosa.load(path, sr=sample_rate)
     if pitch_shift:
         track = librosa.effects.pitch_shift(track, sr=sample_rate, n_steps=pitch_shift)
     if normalize:
         track = librosa.util.normalize(track)
+
+    Cache.get_instance().put_numpy_array(cache_key, track)
+
     return track
 
 def write_audio(audio, output_path, sample_rate=16000, normalize=False):

@@ -266,7 +266,7 @@ def compute_loudness(audio,
   return loudness
 
 
-def _generate_cache_key_for_f0(audio: np.ndarray, sample_rate: int, frame_rate: int, viterbi: bool) -> str:
+def _generate_cache_key_prefix_for_f0(audio: np.ndarray, sample_rate: int, frame_rate: int, viterbi: bool) -> str:
     return f"f0-{viterbi}-{sample_rate}-{frame_rate}-{generate_array_digest(audio)}"
 
 
@@ -285,14 +285,16 @@ def compute_f0(audio, sample_rate, frame_rate, viterbi=True):
     f0_confidence: Confidence in Hz estimate (scaled [0, 1]). Shape [n_frames,].
   """
 
-  cache_key_prefix = _generate_cache_key_for_f0(audio, sample_rate, frame_rate, viterbi)
+  cache_key_prefix = _generate_cache_key_prefix_for_f0(audio, sample_rate, frame_rate, viterbi)
 
   cache_key_hz = cache_key_prefix + "_hz"
   cache_key_confidence = cache_key_prefix + "_confidence"
 
   cache = Cache.get_instance()
 
-  if cache.has_numpy_array(cache_key_prefix):
+  if cache.has_numpy_array(cache_key_hz):
+      # if there's a cache data for hz, there must be for confidence as well.
+      # anyway, if anything goes wrong it will fail loudly.
       return cache.get_numpy_array(cache_key_hz), cache.get_numpy_array(cache_key_confidence)
 
   n_secs = len(audio) / float(sample_rate)  # `n_secs` can have milliseconds
