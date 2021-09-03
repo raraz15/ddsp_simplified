@@ -5,9 +5,6 @@ from tensorflow.keras.callbacks import Callback
 
 import wandb
 
-WANDB_API_KEY = "52c84ab3f3b5c1f999c7f5f389f5e423f46fc04a"
-
-
 class ModelCheckpoint(Callback):
     def __init__(self, save_dir, monitor, **kwargs):
         super().__init__(**kwargs)
@@ -47,7 +44,7 @@ class CustomWandbCallback(Callback):
 
         wandb.login()
         wandb.init(project=config['wandb']['project_name'],
-                    entity='ddsp',
+                    entity='hq9000',
                     name=config['run_name'],
                     config=config)
         self.wandb_run_dir = wandb.run.dir
