@@ -26,6 +26,11 @@ class Cache:
         if not isinstance(data, np.ndarray):
             raise Exception('expected np.ndarray')
 
+        data_dir_path = self._cache_dir_path + "/data"
+
+        if not Path(data_dir_path).exists():
+            os.mkdir(data_dir_path)
+
         np.save(self._generate_file_name_of_numpy_array(key),
                 data)
 
@@ -48,4 +53,4 @@ class Cache:
         os.remove(self._generate_file_name_of_numpy_array(key))
 
     def _generate_file_name_of_numpy_array(self, external_key: str) -> str:
-        return self._cache_dir_path + '/numpy_arrays_' + external_key + '.npy'
+        return self._cache_dir_path + '/data/numpy_arrays_' + external_key + '.npy'
