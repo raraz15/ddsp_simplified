@@ -1,0 +1,39 @@
+run_name: NoLatent_Reverb
+#run_name: NoLatent_Reverb_ConfFiltered
+#run_name: NoLatent_Reverb_Normalized
+# Leave empty for not using wandb
+wandb:
+  project_name: Violin
+data:
+  instrument: Violin
+  path: /home/sergey/infinite_album/ddsp_simplified/ddsp_simplified/audio_clips/Violin_small
+  # Frame rate at the encoder
+  preprocessing_time: 250
+  sample_rate: 16000
+  # confidence threshold level for f0
+  # put 0.0 for not using
+  confidence_threshold: 0.0
+  # Apply audio normalization
+  normalize: False
+model:
+  type: Supervised
+  # Frame rate at the decoder
+  decoder_time: 1000
+  # Use the z encoder or not
+  encoder: False
+  # Whether to use the reverb module
+  reverb: True
+  # Directory to save the model in
+  # leave empty for auto 
+  dir:  
+loss:
+  type: spectral
+  logmag_weight: 1.0
+optimizer:
+  name: Adam
+  decay_rate: 0.98
+  decay_steps: 10000
+  lr: 0.001
+training:
+  batch_size: 32
+  epochs: 1000
