@@ -9,6 +9,7 @@ class MidiLoader:
     FEATURE_VELOCITY = 'velocity'
     FEATURE_PITCH = 'pitch'
     FEATURE_CC_PREFIX = 'cc_'
+    FEATURE_DISTANCE_FROM_ONSET = 'distance_from_onset'
 
     def load(self, midi_file_name: str, frame_rate: int, audio_length_seconds: float):
         midi_data = pretty_midi.PrettyMIDI(midi_file_name)
@@ -49,15 +50,21 @@ class MidiLoader:
         def get_velocity(note: Note) -> np.float32:
             return np.float32(note.velocity)
 
-        res[self.FEATURE_VELOCITY] = self._generate_data_for_note(instrument=instrument,
-                                                                  frame_rate=frame_rate,
-                                                                  audio_length_seconds=audio_length_seconds,
-                                                                  get_feature_value_func=get_velocity)
+        res[self.FEATURE_VELOCITY] = self._generate_single_value_data_for_notes(instrument=instrument,
+                                                                                frame_rate=frame_rate,
+                                                                                audio_length_seconds=audio_length_seconds,
+                                                                                get_single_feature_value_from_note_func=get_velocity)
 
-        res[self.FEATURE_PITCH] = self._generate_data_for_note(instrument=instrument,
-                                                               frame_rate=frame_rate,
-                                                               audio_length_seconds=audio_length_seconds,
-                                                               get_feature_value_func=get_pitch)
+        res[self.FEATURE_PITCH] = self._generate_single_value_data_for_notes(instrument=instrument,
+                                                                             frame_rate=frame_rate,
+                                                                             audio_length_seconds=audio_length_seconds,
+                                                                             get_single_feature_value_from_note_func=get_pitch)
+
+        res[self.FEATURE_DISTANCE_FROM_ONSET] = self._generate_distance_from_onset_data(
+            instrument,
+            frame_rate,
+            audio_length_seconds
+        )
 
         return res
 
@@ -102,11 +109,14 @@ class MidiLoader:
 
         return res
 
-    def _generate_data_for_note(self, instrument: Instrument, frame_rate: int,
-                                audio_length_seconds: float,
-                                get_feature_value_func: Callable[[Note], np.float32]) -> np.ndarray:
+    def _generate_single_value_data_for_notes(self, instrument: Instrument, frame_rate: int,
+                                              audio_length_seconds: float,
+                                              get_single_feature_value_from_note_func: Callable[
+                                                  [Note], np.float32]) -> np.ndarray:
         """
-        Get arbitrary note-bound feature data.
+        Get arbitrary note-bound single value feature data.
+
+        In fact, it's just about having one function for both velocity and pitch.
         """
 
         num_frames = int(audio_length_seconds * frame_rate)
@@ -117,6 +127,25 @@ class MidiLoader:
 
             start_idx = int(note.start * frame_rate)
             end_idx = int(note.end * frame_rate)
-            res[start_idx:end_idx] = get_feature_value_func(note)
+            res[start_idx:end_idx] = get_single_feature_value_from_note_func(note)
+
+        return res
+
+    def _generate_distance_from_onset_data(self, instrument: Instrument, frame_rate: int, audio_length_seconds: float):
+        """
+        Generate data of "distance from onset" feature
+        """
+        num_frames = int(audio_length_seconds * frame_rate)
+        res = np.zeros(dtype=np.float32, shape=(num_frames,))
+
+        for note in instrument.notes:
+            note: Note
+
+            start_idx = int(note.start * frame_rate)
+            end_idx = int(note.end * frame_rate)
+
+            final_value = note.end - note.start
+            patch = np.linspace(0, final_value, num=end_idx - start_idx, dtype=np.float32)
+            res[start_idx:end_idx] = patch
 
         return res

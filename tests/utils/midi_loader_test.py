@@ -13,7 +13,7 @@ class MyTestCase(unittest.TestCase):
 
         keys = res.keys()
 
-        self.assertEquals(['cc_55', 'velocity', 'pitch'], list(keys))
+        self.assertEquals(['cc_55', 'velocity', 'pitch', 'distance_from_onset'], list(keys))
         self.assertEqual(1000, res['cc_55'].shape[0])
         self.assertEqual(1000, res['velocity'].shape[0])
         self.assertEqual(1000, res['pitch'].shape[0])
