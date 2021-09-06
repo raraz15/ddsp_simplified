@@ -1,4 +1,6 @@
 import glob
+from typing import Dict, Optional
+
 import numpy as np
 
 from tensorflow.data import Dataset
@@ -6,7 +8,7 @@ import tensorflow_datasets as tfds
 from sklearn.model_selection import train_test_split
 
 from feature_extraction import extract_features_from_frames, feature_extractor
-from utilities import frame_generator, load_track
+from utilities import frame_generator, load_audio_track
 
 
 def _make_dataset(features, batch_size=32, seed=None):
@@ -18,14 +20,20 @@ def _make_dataset(features, batch_size=32, seed=None):
 
 # -------------------------------------------- Supervised Dataset -------------------------------------------------
 
+def guess_midi_file_name_by_audio_file_name(audio_file_name: str) -> str:
+    raise Exception('not implemented')
+
+
 def make_supervised_dataset(path, mfcc=False, batch_size=32, sample_rate=16000,
-                            normalize=False, conf_threshold=0.0, mfcc_nfft=1024):
+                            normalize=False, conf_threshold=0.0, mfcc_nfft=1024,
+                            raw_config: Optional[Dict] = None):
     """Loads all the mp3 files in the path, creates frames and extracts features."""
 
     frames = []
-    for file in glob.glob(path+'/*.mp3'):    
-        track = load_track(file, sample_rate=sample_rate, normalize=normalize)
-        frames.append(frame_generator(track, 4*sample_rate)) # create 4 seconds long frames     
+    for audio_file_name in glob.glob(path+'/*.mp3'):
+        midi_file_name = guess_midi_file_name_by_audio_file_name(audio_file_name)
+        audio_data = load_audio_track(audio_file_name, sample_rate=sample_rate, normalize=normalize)
+        frames.append(frame_generator(audio_data, 4 * sample_rate))  # create 4 seconds long frames
     frames = np.concatenate(frames, axis=0)   
     trainX, valX = train_test_split(frames)
     print('Train set size: {}\nVal set size: {}'.format(len(trainX),len(valX)))
@@ -40,7 +48,7 @@ def make_supervised_dataset(path, mfcc=False, batch_size=32, sample_rate=16000,
 def make_unsupervised_dataset(path, batch_size=32, sample_rate=16000, normalize=False, frame_rate=250):
     frames = []
     for file in glob.glob(path+'/*.mp3'):    
-        track = load_track(file, sample_rate=sample_rate, normalize=normalize)
+        track = load_audio_track(file, sample_rate=sample_rate, normalize=normalize)
         frames.append(frame_generator(track, 4*sample_rate)) # create 4 seconds long frames     
     frames = np.concatenate(frames, axis=0)   
     trainX, valX = train_test_split(frames)
