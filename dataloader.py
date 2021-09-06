@@ -8,7 +8,7 @@ import tensorflow_datasets as tfds
 from sklearn.model_selection import train_test_split
 
 from feature_extraction import extract_features_from_frames, feature_extractor
-from utilities import frame_generator, load_audio_track
+from utilities import frame_generator, load_track
 
 
 def _make_dataset(features, batch_size=32, seed=None):
@@ -32,7 +32,8 @@ def make_supervised_dataset(path, mfcc=False, batch_size=32, sample_rate=16000,
     frames = []
     for audio_file_name in glob.glob(path+'/*.mp3'):
         midi_file_name = guess_midi_file_name_by_audio_file_name(audio_file_name)
-        audio_data = load_audio_track(audio_file_name, sample_rate=sample_rate, normalize=normalize)
+        audio_data = load_track(audio_file_name, sample_rate=sample_rate, normalize=normalize)
+        midi_data = load_midi_track(midi_file_name, )
         frames.append(frame_generator(audio_data, 4 * sample_rate))  # create 4 seconds long frames
     frames = np.concatenate(frames, axis=0)   
     trainX, valX = train_test_split(frames)

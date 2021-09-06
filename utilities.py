@@ -1,4 +1,5 @@
 from hashlib import md5
+from typing import Dict, List
 
 import numpy as np
 from scipy.io.wavfile import write
@@ -67,6 +68,9 @@ def load_track(path, sample_rate=16000, pitch_shift=0, normalize=False):
     Cache.get_instance().put_numpy_array(cache_key, track)
 
     return track
+
+def load_midi_track(midi_file_name: str, frame_rate: int, feature_names: List[str]) -> Dict[str, np.ndarray]:
+    pass
 
 def write_audio(audio, output_path, sample_rate=16000, normalize=False):
     assert '.wav' in output_path, 'Title must include .wav extension'
