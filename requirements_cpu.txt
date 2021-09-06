@@ -1,5 +1,6 @@
 appdirs==1.4.4
 apturl==0.5.2
+argcomplete==1.12.3
 argon2-cffi==20.1.0
 asn1crypto==0.24.0
 attrs==20.1.0
@@ -13,6 +14,7 @@ chrome-gnome-shell==0.0.0
 command-not-found==0.3
 cryptography==2.1.4
 cupshelpers==1.0
+debugpy==1.4.1
 decorator==4.4.2
 defer==1.0.6
 defusedxml==0.6.0
@@ -24,13 +26,19 @@ guake==3.7.0
 httplib2==0.11.3
 idna==2.6
 importlib-metadata==1.7.0
+ipykernel==6.3.1
+ipython==7.27.0
 ipython-genutils==0.2.0
+ipywidgets==7.6.4
 jedi==0.17.2
 Jinja2==2.11.2
 json5==0.9.5
 jsonschema==3.2.0
+jupyter==1.0.0
 jupyter-client==6.1.7
+jupyter-console==6.4.0
 jupyter-core==4.6.3
+jupyterlab-widgets==1.0.1
 kazam==1.4.5
 keyring==10.6.0
 keyrings.alt==3.0
@@ -42,6 +50,7 @@ louis==3.5.0
 macaroonbakery==1.1.3
 Mako==1.0.7
 MarkupSafe==1.0
+matplotlib-inline==0.1.2
 meld==3.18.0
 mido==1.2.10
 mistune==0.8.4
@@ -83,6 +92,8 @@ pytz==2018.3
 pyxdg==0.25
 PyYAML==3.12
 pyzmq==19.0.2
+qtconsole==5.1.1
+QtPy==1.11.0
 reportlab==3.4.0
 requests==2.18.4
 requests-unixsocket==0.1.5
@@ -107,6 +118,7 @@ virtualenv-clone==0.5.4
 wadllib==1.3.2
 wcwidth==0.2.5
 webencodings==0.5.1
+widgetsnbextension==3.5.1
 xkit==0.0.0
 zipp==3.1.0
 zope.interface==4.3.2
