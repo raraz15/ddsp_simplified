@@ -1,5 +1,6 @@
 import glob
-from typing import Dict, Optional
+import os.path
+from typing import Dict, Optional, List
 
 import numpy as np
 
@@ -8,8 +9,10 @@ import tensorflow_datasets as tfds
 from sklearn.model_selection import train_test_split
 
 from feature_extraction import extract_features_from_frames, feature_extractor
-from utilities import frame_generator, load_track
+from utilities import frame_generator, load_track, load_midi_track
 
+
+MIDI_FILE_EXTENSION = 'MID'
 
 def _make_dataset(features, batch_size=32, seed=None):
     features = Dataset.from_tensor_slices(features)
@@ -21,22 +24,24 @@ def _make_dataset(features, batch_size=32, seed=None):
 # -------------------------------------------- Supervised Dataset -------------------------------------------------
 
 def guess_midi_file_name_by_audio_file_name(audio_file_name: str) -> str:
-    raise Exception('not implemented')
+    return os.path.splitext(audio_file_name)[0] + '.' + MIDI_FILE_EXTENSION
 
 
 def make_supervised_dataset(path, mfcc=False, batch_size=32, sample_rate=16000,
                             normalize=False, conf_threshold=0.0, mfcc_nfft=1024,
-                            raw_config: Optional[Dict] = None):
+                            frame_rate: int = 250,
+                            midi_feature_names: List[str] = []
+                            ):
     """Loads all the mp3 files in the path, creates frames and extracts features."""
 
-    frames = []
+    audio_frames = []
     for audio_file_name in glob.glob(path+'/*.mp3'):
         midi_file_name = guess_midi_file_name_by_audio_file_name(audio_file_name)
         audio_data = load_track(audio_file_name, sample_rate=sample_rate, normalize=normalize)
-        midi_data = load_midi_track(midi_file_name, )
-        frames.append(frame_generator(audio_data, 4 * sample_rate))  # create 4 seconds long frames
-    frames = np.concatenate(frames, axis=0)   
-    trainX, valX = train_test_split(frames)
+        midi_data = load_midi_track(midi_file_name, frame_rate, audio_data.shape[0] / sample_rate)
+        audio_frames.append(frame_generator(audio_data, 4 * sample_rate))  # create 4 seconds long frames
+    audio_frames = np.concatenate(audio_frames, axis=0)
+    trainX, valX = train_test_split(audio_frames)
     print('Train set size: {}\nVal set size: {}'.format(len(trainX),len(valX)))
     train_features = extract_features_from_frames(trainX, mfcc=mfcc, sample_rate=sample_rate,
                                                 conf_threshold=conf_threshold, mfcc_nfft=mfcc_nfft)

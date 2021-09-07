@@ -9,6 +9,7 @@ import librosa
 from tensorflow import newaxis
 
 from utils.cache import Cache
+from utils.midi_loader import MidiLoader
 
 
 def at_least_3d(x):
@@ -69,8 +70,29 @@ def load_track(path, sample_rate=16000, pitch_shift=0, normalize=False):
 
     return track
 
-def load_midi_track(midi_file_name: str, frame_rate: int, feature_names: List[str]) -> Dict[str, np.ndarray]:
-    pass
+def load_midi_track(path_to_midi_file: str, frame_rate: int, audio_length_seconds: float)->Dict[str, np.ndarray]:
+    """
+    Load a midi file.
+
+    Loads a midi file and returns a dictionary mapping names of midi features
+    to 1-d float32 numpy arrays with values of all possible midi features
+    sampled at frame_rate
+
+    Args:
+        path_to_midi_file (str): absolute path to a MIDI file to be loaded
+        frame_rate (int): rate at which midi features will be samples
+        audio_length_seconds (float): full length (in seconds) of the corresponding audio file
+
+    Returns:
+        Dict[str, np.ndarray]: a dictionary mapping names of the midi features (as defined in MidiLoader class constants)
+                               into corresponding numpy arrays
+    """
+    loader = MidiLoader()
+    return loader.load(
+        midi_file_name=path_to_midi_file,
+        frame_rate=frame_rate,
+        audio_length_seconds=audio_length_seconds
+    )
 
 def write_audio(audio, output_path, sample_rate=16000, normalize=False):
     assert '.wav' in output_path, 'Title must include .wav extension'
