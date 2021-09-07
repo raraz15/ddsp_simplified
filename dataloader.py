@@ -9,11 +9,11 @@ import tensorflow_datasets as tfds
 from sklearn.model_selection import train_test_split
 
 from feature_extraction import extract_features_from_frames, feature_extractor
-from utilities import frame_generator, load_track, load_midi_track, generate_midi_features_examples
+from utilities import frame_generator, load_track, load_midi_track, generate_midi_features_examples, concat_dct
 
 MIDI_FILE_EXTENSION = 'MID'
 
-def _make_dataset(features, midi_features: List[Dict[str, np.ndarray]], batch_size=32, seed=None):
+def _make_dataset(features, batch_size=32, seed=None):
     features = Dataset.from_tensor_slices(features)
     features = features.shuffle(len(features)*2, seed, True) # shuflle at each iteration
     features = features.batch(batch_size)
@@ -66,6 +66,9 @@ def make_supervised_dataset(path, mfcc=False, batch_size=32, sample_rate=16000,
     train_shuffled_midi_frames = [x['midi'] for x in trainX]
     val_shuffled_midi_frames = [x['midi'] for x in valX]
 
+    train_shuffled_midi_frames = concat_dct(train_shuffled_midi_frames)
+    val_shuffled_midi_frames = concat_dct(val_shuffled_midi_frames)
+
     # audio_and_midi_features_frames = np.concatenate(audio_and_midi_features_frames, axis=0)
 
     print('Train set size: {}\nVal set size: {}'.format(len(trainX),len(valX)))
@@ -73,7 +76,21 @@ def make_supervised_dataset(path, mfcc=False, batch_size=32, sample_rate=16000,
                                                                   conf_threshold=conf_threshold, mfcc_nfft=mfcc_nfft)
     val_audio_and_audio_features = extract_features_from_frames(val_shuffled_audio_frames, mfcc=mfcc, sample_rate=sample_rate,
                                                                 conf_threshold=conf_threshold, mfcc_nfft=mfcc_nfft)
-    return _make_dataset(train_audio_and_audio_features, train_shuffled_midi_frames, batch_size), _make_dataset(val_audio_and_audio_features, val_shuffled_midi_frames, batch_size), None
+
+    combined_train_features = {
+        **train_audio_and_audio_features,
+        **train_shuffled_midi_frames
+    }
+
+    combined_val_features = {
+        **val_audio_and_audio_features,
+        **val_shuffled_midi_frames
+    }
+
+    train_dataset = _make_dataset(combined_train_features, batch_size)
+    val_dataset = _make_dataset(combined_val_features, batch_size)
+
+    return train_dataset, val_dataset, None
 
 # -------------------------------------------- Unsupervised Datasets ----------------------------------------------
 
