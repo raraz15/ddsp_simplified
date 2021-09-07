@@ -105,7 +105,7 @@ def make_supervised_dataset_from_config(config: Dict):
                                 sample_rate=config['data']['sample_rate'],
                                 normalize=config['data']['normalize'],
                                 conf_threshold=config['data']['confidence_threshold'],
-                                frame_rate=config['data']['frame_rate'])
+                                frame_rate=250)
 
 def make_unsupervised_dataset_from_config(config):
     return make_unsupervised_dataset(config['data']['path'],

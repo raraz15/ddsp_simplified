@@ -35,6 +35,20 @@ def frame_generator(track, frame_size=64000):
     return track[:len(track)-len(track)%frame_size].reshape(-1, frame_size)
 
 
+def generate_midi_features_examples(midi_data: Dict[str, np.ndarray], length_of_one_example: int) -> List[Dict[str, np.ndarray]]:
+
+    keys = list(midi_data.keys())
+    total_length = len(midi_data[keys[0]])
+
+    examples = []
+    for i in range(0, total_length-length_of_one_example, length_of_one_example):
+        example = {}
+        for key in keys:
+            example[key] = midi_data[key][i:i+length_of_one_example]
+        examples.append(example)
+
+    return examples
+
 def _generate_cache_key_for_audio(path: str, sample_rate: int, pitch_shift: int, normalize: bool) -> str:
     return f"{md5(path.encode('utf-8')).hexdigest()}-{sample_rate}-{pitch_shift}-{normalize}"
 
