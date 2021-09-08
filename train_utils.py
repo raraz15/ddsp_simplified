@@ -105,11 +105,13 @@ def make_supervised_dataset_from_config(config: Dict):
                                 sample_rate=config['data']['sample_rate'],
                                 normalize=config['data']['normalize'],
                                 conf_threshold=config['data']['confidence_threshold'],
-                                frame_rate=250)
+                                frame_rate=config['data'].get('frame_rate', 250),
+                                midi_feature_names=config['data'].get('midi_features', None))
+
 
 def make_unsupervised_dataset_from_config(config):
     return make_unsupervised_dataset(config['data']['path'],
                                 batch_size=config['training']['batch_size'],
                                 sample_rate=config['data']['sample_rate'],
                                 normalize=config['data']['normalize'],
-                                frame_rate=config['data']['preprocessing_time']) 
+                                frame_rate=config['data']['preprocessing_time'])

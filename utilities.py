@@ -84,13 +84,19 @@ def load_track(path, sample_rate=16000, pitch_shift=0, normalize=False):
 
     return track
 
-def load_midi_track(path_to_midi_file: str, frame_rate: int, audio_length_seconds: float)->Dict[str, np.ndarray]:
+def get_raw_midi_features_from_file(path_to_midi_file: str, frame_rate: int, audio_length_seconds: float)->Dict[str, np.ndarray]:
     """
-    Load a midi file.
+    Load a midi file amd return a dictionary of certain raw midi features.
 
-    Loads a midi file and returns a dictionary mapping names of midi features
+    Loads a midi file and returns a dictionary mapping names of raw midi features
     to 1-d float32 numpy arrays with values of all possible midi features
-    sampled at frame_rate
+    sampled at frame_rate.
+
+    Where raw midi features are the following values sampled at sample_rate:
+    - velocity (0.0-128.0)
+    - pitch (0.0-128.0)
+    - CC values (one stream for each distinct CC faced) (0.0-128.0)
+    - "distance_from_onset" (0.0-inf) - these are seconds so it is potentially unlimited
 
     Args:
         path_to_midi_file (str): absolute path to a MIDI file to be loaded

@@ -10,11 +10,15 @@ data:
   # Frame rate at the encoder
   preprocessing_time: 250
   sample_rate: 16000
+  frame_rate: 250
   # confidence threshold level for f0
   # put 0.0 for not using
   confidence_threshold: 0.0
   # Apply audio normalization
   normalize: False
+  midi_features:
+    - cc_55
+
 model:
   type: Supervised
   # Frame rate at the decoder
