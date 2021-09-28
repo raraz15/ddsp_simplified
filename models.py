@@ -63,14 +63,6 @@ class Autoencoder(Model):
         audio_synth = self.get_audio_from_outputs(model_output)
         return audio_synth.numpy().reshape(-1)    
 
-    # is copying necessary?
-    #def call(self, features):
-    #    _features = features.copy()
-    #    _features = self.encode(_features)
-    #    _features = self.decode(_features)
-    #    outputs = self.dsp_process(_features)       
-    #    return outputs
-
     def call(self, features):
         features = self.encode(features)
         features = self.decode(features)
