@@ -1,12 +1,12 @@
-run_name: NoLatent_Reverb_48000
+run_name: NoLatent_Reverb
 # Experiment tracking with wandb
 wandb:
-  project_name: Violin # Leave empty for not using wandb
-  entity: 'ddsp'
+  project_name: Rochester_Violin # Leave empty for not using wandb
+  entity: 'whatever_llc'
 data:
   instrument: Violin
   # Path to the audio clips or the created dataset
-  path: /home/ubuntu/ddsp_simplified/audio_clips/violin
+  path: /home/ubuntu/ddsp_simplified/datasets/rochester_violin
   sample_rate: 16000
   # Duration of a clip
   clip_dur: 4
@@ -35,5 +35,5 @@ optimizer:
   decay_steps: 10000
   lr: 0.001
 training:
-  batch_size: 32
+  batch_size: 64
   epochs: 5000
