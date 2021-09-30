@@ -1,3 +1,4 @@
+import os
 import glob
 import numpy as np
 
@@ -8,13 +9,28 @@ from sklearn.model_selection import train_test_split
 from feature_extraction import extract_features_from_frames, feature_extractor
 from utilities import frame_generator, load_track
 
+# This script is for creating supervised and unsupervised datasets during training
+# without exporting the datasets or laoding existing ones.
+# If you require a dataset to be created and exported, use create_dataset.py
+
+FRAME_LEN = 4
+
+def load_dataset(dataset_dir):
+    train_path = os.path.join(dataset_dir, 'train.npy')
+    val_path = os.path.join(dataset_dir, 'val.npy')
+    train_features = np.load(train_path, allow_pickle=True).item()
+    val_features = np.load(val_path, allow_pickle=True).item()
+    return _make_dataset(train_features), _make_dataset(val_features), None
+
 
 def _make_dataset(features, batch_size=32, seed=None):
+    """Creates a dataset from extracted features."""
     features = Dataset.from_tensor_slices(features)
     features = features.shuffle(len(features)*2, seed, True) # shuflle at each iteration
     features = features.batch(batch_size)
     features = features.prefetch(1) # preftech 1 batch
     return features
+
 
 # -------------------------------------------- Supervised Dataset -------------------------------------------------
 
@@ -25,7 +41,7 @@ def make_supervised_dataset(path, mfcc=False, batch_size=32, sample_rate=16000,
     frames = []
     for file in glob.glob(path+'/*.mp3'):    
         track = load_track(file, sample_rate=sample_rate, normalize=normalize)
-        frames.append(frame_generator(track, 4*sample_rate)) # create 4 seconds long frames     
+        frames.append(frame_generator(track, FRAME_LEN*sample_rate))   
     frames = np.concatenate(frames, axis=0)   
     trainX, valX = train_test_split(frames)
     print('Train set size: {}\nVal set size: {}'.format(len(trainX),len(valX)))
@@ -41,7 +57,7 @@ def make_unsupervised_dataset(path, batch_size=32, sample_rate=16000, normalize=
     frames = []
     for file in glob.glob(path+'/*.mp3'):    
         track = load_track(file, sample_rate=sample_rate, normalize=normalize)
-        frames.append(frame_generator(track, 4*sample_rate)) # create 4 seconds long frames     
+        frames.append(frame_generator(track, FRAME_LEN*sample_rate))     
     frames = np.concatenate(frames, axis=0)   
     trainX, valX = train_test_split(frames)
     train_features = extract_features_from_frames(trainX, f0=False, mfcc=True, log_mel=True,
@@ -73,7 +89,7 @@ def preprocess_ex(ex):
 
 #from tensorflow.keras.utils import Sequence
 
-#def make_datasets(batch_size, percent=100):
+#def _make_datasets(batch_size, percent=100):
 #    datasets = [create_tf_dataset_from_npzs(glob.glob("data/{}/*.npz".format(folder)), batch_size, percent) for 
 #                         folder in ["train","validation","test"]]
 #    return datasets

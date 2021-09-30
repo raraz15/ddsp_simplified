@@ -1,6 +1,7 @@
 import os, argparse, yaml
 
 from train_utils import make_supervised_model, create_callbacks, make_optimizer, make_supervised_dataset_from_config
+from dataloader import load_dataset
 
 if __name__ == '__main__':
     
@@ -12,8 +13,11 @@ if __name__ == '__main__':
     with open(args.path, 'r') as file:
         config = dict(yaml.load(file, Loader=yaml.FullLoader))
     
-    # Create the datasets
-    train_set, validation_set, _ = make_supervised_dataset_from_config(config)
+    # Create the datasets or load them
+    try:
+        train_set, validation_set, _ = make_supervised_dataset_from_config(config)
+    except:
+        train_set, validation_set, _ = load_dataset(config['data']['path'])
     print('Dataset created.')
     
     # Create the entire model and define the training 

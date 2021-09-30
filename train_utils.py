@@ -107,7 +107,7 @@ def make_supervised_dataset_from_config(config):
                                 batch_size=config['training']['batch_size'],
                                 sample_rate=config['data']['sample_rate'],
                                 normalize=config['data']['normalize'],
-                                conf_threshold=config['data']['confidence_threshold'])  
+                                conf_threshold=config['data']['confidence_threshold'])
 
 def make_unsupervised_dataset_from_config(config):
     return make_unsupervised_dataset(config['data']['path'],
