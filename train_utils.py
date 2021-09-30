@@ -10,11 +10,32 @@ from decoders import DecoderWithoutLatent, DecoderWithLatent
 from losses import SpectralLoss, MultiLoss
 from callbacks import ModelCheckpoint, CustomWandbCallback 
 
-from metrics import f0_midi_scaled_L1_loss #????
+from metrics import f0_midi_scaled_L1_loss
 
 from dataloader import make_supervised_dataset, make_unsupervised_dataset
 
 # -------------------------------------- Models -------------------------------------------------
+
+def make_supervised_model(config):
+    """Creates the necessary components of a supervised ddsp using the config."""
+    preprocessor = F0LoudnessPreprocessor(timesteps=config['data']['preprocessing_time'])
+    if config['model']['encoder']:
+        encoder = SupervisedEncoder()
+        decoder = DecoderWithLatent(timesteps=config['model']['decoder_time'])
+    else:
+        encoder = None
+        decoder = DecoderWithoutLatent(timesteps=config['model']['decoder_time'])
+    assert config['loss']['type'] == 'spectral', 'The supervised ddsp can only be trained with spectral loss.'
+    loss = SpectralLoss(logmag_weight=config['loss']['logmag_weight'])
+    model = SupervisedAutoencoder(preprocessor=preprocessor,
+                                encoder=encoder,
+                                decoder=decoder,
+                                add_reverb=config['model']['reverb'],
+                                loss_fn=loss,
+                                n_samples=config['data']['clip_dur']*config['data']['sample_rate'],
+                                sample_rate=config['data']['sample_rate'],
+                                tracker_names=['spec_loss'])
+    return model
 
 # TODO: enc, dec params
 # TODO metric fns
@@ -40,32 +61,15 @@ def make_unsupervised_model(config):
                                 tracker_names=tracker_names,
                                 metric_fns=metric_fns,
                                 add_reverb=config['model']['reverb'])
-    return model
-
-def make_supervised_model(config):
-    """Creates the necessary components of a supervised ddsp using the config."""
-    preprocessor = F0LoudnessPreprocessor(timesteps=config['data']['preprocessing_time'])
-    if config['model']['encoder']:
-        encoder = SupervisedEncoder()
-        decoder = DecoderWithLatent(timesteps=config['model']['decoder_time'])
-    else:
-        encoder = None
-        decoder = DecoderWithoutLatent(timesteps=config['model']['decoder_time'])
-    loss = SpectralLoss(logmag_weight=config['loss']['logmag_weight'])
-    model = SupervisedAutoencoder(preprocessor=preprocessor,
-                                encoder=encoder,
-                                decoder=decoder,
-                                loss_fn=loss,
-                                tracker_names=['spec_loss'],
-                                add_reverb=config['model']['reverb'])
-    return model
+    return model    
 
 # -------------------------------------- Optimizer -------------------------------------------------
 
 def make_optimizer(config):
-    optimizer = Adam(learning_rate=ExponentialDecay(config['optimizer']['lr'],
+    scheduler = ExponentialDecay(config['optimizer']['lr'],
                                 decay_steps=config['optimizer']['decay_steps'],
-                                decay_rate=config['optimizer']['decay_rate']))    
+                                decay_rate=config['optimizer']['decay_rate'])
+    optimizer = Adam(learning_rate=scheduler)    
     return optimizer                                    
 
 # -------------------------------------- Callbacks -------------------------------------------------
@@ -80,7 +84,7 @@ def create_callbacks(config, monitor):
             callbacks = [ModelCheckpoint(save_dir=model_dir, monitor=monitor),
                         CustomWandbCallback(config)]
     else:
-        if not config['wandb']: # define a save_dir
+        if config['wandb']['project_name'] is None: # define a save_dir
             model_dir = "model_checkpoints/{}".format(config['run_name'])
             callbacks = [ModelCheckpoint(save_dir=model_dir, monitor=monitor)]
         else: # save to wandb.run.dir
@@ -98,8 +102,8 @@ def make_supervised_dataset_from_config(config):
     except:
         mfcc_nfft = 1024
     return make_supervised_dataset(config['data']['path'],
-                                mfcc=config['model']['encoder'],
-                                mfcc_nfft=mfcc_nfft,
+                                mfcc=config['model']['encoder'], # extract mfcc or not
+                                mfcc_nfft=mfcc_nfft, # number of fft coefficients
                                 batch_size=config['training']['batch_size'],
                                 sample_rate=config['data']['sample_rate'],
                                 normalize=config['data']['normalize'],
