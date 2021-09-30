@@ -5,8 +5,6 @@ from tensorflow.keras.callbacks import Callback
 
 import wandb
 
-WANDB_API_KEY = "52c84ab3f3b5c1f999c7f5f389f5e423f46fc04a"
-
 
 class ModelCheckpoint(Callback):
     def __init__(self, save_dir, monitor, **kwargs):

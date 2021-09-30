@@ -12,6 +12,7 @@ class Autoencoder(Model):
                loss_fn=None,
                n_samples=64000,
                sample_rate=16000,
+               reverb_length=48000,
                tracker_names=["spec_loss"],
                metric_fns={},
                **kwargs):
@@ -32,7 +33,7 @@ class Autoencoder(Model):
         
         self.add_reverb = add_reverb
         if self.add_reverb:
-            self.reverb = Reverb(reverb_length=n_samples)
+            self.reverb = Reverb(reverb_length=reverb_length)
         self.trackers = TrackerGroup(*tracker_names)
         self.metric_fns = metric_fns
             
@@ -97,7 +98,7 @@ class Autoencoder(Model):
     @property
     def metrics(self):
         return self.trackers.trackers.values()
-  
+
 class SupervisedAutoencoder(Autoencoder):
     def __init__(self,
                preprocessor=None,
@@ -107,11 +108,12 @@ class SupervisedAutoencoder(Autoencoder):
                loss_fn=None,
                n_samples=64000,
                sample_rate=16000,
+               reverb_length=48000,
                tracker_names=["spec_loss"],
                metric_fns={},
                **kwargs):
         
-        super().__init__(preprocessor, add_reverb, loss_fn, n_samples, sample_rate,
+        super().__init__(preprocessor, add_reverb, loss_fn, n_samples, sample_rate, reverb_length=reverb_length,
                         tracker_names=tracker_names, metric_fns=metric_fns, **kwargs)
         self.encoder = encoder
         self.decoder = decoder
@@ -143,11 +145,13 @@ class UnsupervisedAutoencoder(Autoencoder):
                loss_fn=None,
                n_samples=64000,
                sample_rate=16000,
+               reverb_length=48000,
                tracker_names=["spec_loss"],
                metric_fns={},
                **kwargs):
         
-        super().__init__(preprocessor, add_reverb, loss_fn, n_samples, sample_rate, tracker_names=tracker_names, metric_fns=metric_fns, **kwargs)
+        super().__init__(preprocessor, add_reverb, loss_fn, n_samples, sample_rate, reverb_length=reverb_length,
+                         tracker_names=tracker_names, metric_fns=metric_fns, **kwargs)
         
         self.encoder = encoder
         self.decoder = decoder
