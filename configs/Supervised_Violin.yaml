@@ -1,18 +1,17 @@
-run_name: NoLatent_Reverb
-#run_name: NoLatent_Reverb_ConfFiltered
-#run_name: NoLatent_Reverb_Normalized
-# Leave empty for not using wandb
+run_name: NoLatent_Reverb_48000
+# Experiment tracking with wandb
 wandb:
-  project_name: Violin
+  project_name: Violin # Leave empty for not using
 data:
   instrument: Violin
-  path: /kuacc/users/hbalim15/ddsp/audio_clips/Violin
+  path: /home/ubuntu/ddsp_simplified/audio_clips/violin
+  sample_rate: 16000
+  # Duration of a clip
+  clip_dur: 4
   # Frame rate at the encoder
   preprocessing_time: 250
-  sample_rate: 16000
   # confidence threshold level for f0
-  # put 0.0 for not using
-  confidence_threshold: 0.0
+  confidence_threshold: 0.0 # put 0.0 for not using
   # Apply audio normaliztion
   normalize: False
 model:
@@ -23,9 +22,8 @@ model:
   encoder: False
   # Whether to use the reverb module
   reverb: True
-  # Directory to save the model in
-  # leave empty for auto 
-  dir:  
+  # Directory to save the model in 
+  dir:  # leave empty for auto
 loss:
   type: spectral
   logmag_weight: 1.0
@@ -36,4 +34,4 @@ optimizer:
   lr: 0.001
 training:
   batch_size: 32
-  epochs: 1000
+  epochs: 5000
