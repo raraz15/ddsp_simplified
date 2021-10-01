@@ -1,10 +1,9 @@
 from tensorflow.keras import layers as tfkl
 
-from dsp_utils import spectral_ops
 from dsp_utils.core import resample, midi_to_hz, hz_to_midi
 
-F0_RANGE = spectral_ops.F0_RANGE
-LD_RANGE = spectral_ops.LD_RANGE
+from ddsp.spectral_ops import F0_RANGE
+from ddsp.spectral_ops import LD_RANGE
 
 from utilities import at_least_3d
 
