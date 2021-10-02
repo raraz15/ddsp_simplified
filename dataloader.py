@@ -15,12 +15,12 @@ from utilities import frame_generator, load_track
 
 FRAME_LEN = 4
 
-def load_dataset(dataset_dir):
+def load_dataset(dataset_dir, batch_size=32):
     train_path = os.path.join(dataset_dir, 'train.npy')
     val_path = os.path.join(dataset_dir, 'val.npy')
     train_features = np.load(train_path, allow_pickle=True).item()
     val_features = np.load(val_path, allow_pickle=True).item()
-    return _make_dataset(train_features), _make_dataset(val_features), None
+    return _make_dataset(train_features, batch_size), _make_dataset(val_features, batch_size), None
 
 
 def _make_dataset(features, batch_size=32, seed=None):
@@ -30,7 +30,6 @@ def _make_dataset(features, batch_size=32, seed=None):
     features = features.batch(batch_size)
     features = features.prefetch(1) # preftech 1 batch
     return features
-
 
 # -------------------------------------------- Supervised Dataset -------------------------------------------------
 
@@ -52,6 +51,7 @@ def make_supervised_dataset(path, mfcc=False, batch_size=32, sample_rate=16000,
     return _make_dataset(train_features, batch_size), _make_dataset(val_features, batch_size), None
 
 # -------------------------------------------- Unsupervised Datasets ----------------------------------------------
+# TODO: make functional
 
 def make_unsupervised_dataset(path, batch_size=32, sample_rate=16000, normalize=False, frame_rate=250):
     frames = []
@@ -83,69 +83,3 @@ def preprocess_ex(ex):
     dct.update(feature_extractor(ex['audio'], sample_rate=16000, frame_rate=250,
                         f0=False, mfcc=True, log_mel=True))
     return dct  
-
-
-#import tensorflow as tf
-
-#from tensorflow.keras.utils import Sequence
-
-#def _make_datasets(batch_size, percent=100):
-#    datasets = [create_tf_dataset_from_npzs(glob.glob("data/{}/*.npz".format(folder)), batch_size, percent) for 
-#                         folder in ["train","validation","test"]]
-#    return datasets
-
-#def create_tf_dataset_from_npzs(npzs, batch_size, percent):
-#    def generator(dataset_generator):
-#        while True:
-#            for batch in dataset_generator:
-#                yield batch
-#    npzs = npzs[:int(len(npzs)*percent/100)]
-#    data_generator = DataGenerator(npzs, batch_size)
-#    generator_func = lambda: generator(data_generator)
-#    sample = data_generator[0]
-#    output_shapes = {k:sample[k].shape for k in sample}
-#    output_types = {k:sample[k].dtype for k in sample}
-#    dataset = Dataset.from_generator(generator_func, output_shapes=output_shapes, output_types=output_types)
-#    dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-#    dataset.my_len = len(data_generator)
-#    return dataset
-
-#class DataGenerator(Sequence):
-#    def __init__(self, list_IDs, batch_size=64, shuffle=True, **kwargs):
-#        super().__init__(**kwargs)
-#        self.batch_size = batch_size
-#        self.list_IDs = list_IDs[:-(len(list_IDs)%batch_size)]
-#        self.shuffle = shuffle
-#        self.reset()
-#
-#    def __len__(self):
-#        'Denotes the number of batches per epoch'
-#        return int(np.floor(len(self.list_IDs) / self.batch_size))
-#
-#    def __getitem__(self, index):
-#        'Generate one batch of data'
-#        # Generate indexes of the batch
-#        if (index+1)*self.batch_size >= len(self.indexes):
-#            self.reset()
-#        indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
-#
-#        # Find list of IDs
-#        list_IDs_temp = [self.list_IDs[k] for k in indexes]
-#
-#        # Generate data
-#        X = self.__data_generation(list_IDs_temp)
-#
-#        return X
-#
-#    def reset(self):
-#        'Updates indexes after each epoch'
-#        self.indexes = np.arange(len(self.list_IDs))
-#        if self.shuffle == True:
-#            np.random.shuffle(self.indexes)
-#
-#    def __data_generation(self, list_IDs_temp):
-#        batch = {}
-#        arrays = [np.load(ID) for ID in list_IDs_temp]
-#        for file in arrays[0].files:
-#            batch[file] = np.array([arr[file] for arr in arrays])
-#        return batch
