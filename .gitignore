@@ -153,3 +153,4 @@ audio_clips/**
 
 *.txt
 *.wav
+*.npy
