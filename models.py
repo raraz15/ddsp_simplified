@@ -65,10 +65,11 @@ class Autoencoder(Model):
         return audio_synth.numpy().reshape(-1)    
 
     def call(self, features):
-        features = self.encode(features)
-        features = self.decode(features)
-        outputs = self.dsp_process(features)       
-        return outputs        
+        _features = features.copy() # required by tf
+        _features = self.encode(_features)
+        _features = self.decode(_features)
+        outputs = self.dsp_process(_features)       
+        return outputs       
   
     @tf.function
     def train_step(self, x):
@@ -130,7 +131,7 @@ class SupervisedAutoencoder(Autoencoder):
         return features
     
     def decode(self, features):
-        """Map the f,l (,z) parameters to synthesizer parameters."""
+        """Map the f, l (,z) parameters to synthesizer parameters."""
         
         outputs = self.decoder(features)       
         features.update(outputs)
