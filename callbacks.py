@@ -6,7 +6,6 @@ from tensorflow.keras.callbacks import Callback
 import wandb
 
 
-
 class ModelCheckpoint(Callback):
     def __init__(self, save_dir, monitor, save_every=250, **kwargs):
         super().__init__(**kwargs)

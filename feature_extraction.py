@@ -18,9 +18,9 @@ def feature_extractor(audio, sample_rate=16000, model=None, frame_rate=250,
     features = {'audio': audio}
 
     if f0:
-        f0, confidence = compute_f0(audio, sample_rate, frame_rate, viterbi=True) 
-        f0 = confidence_filter(f0, confidence, conf_threshold)
-        features['f0_hz'] = f0
+        f0_hz, confidence = compute_f0(audio, sample_rate, frame_rate, viterbi=True) 
+        f0_hz = confidence_filter(f0_hz, confidence, conf_threshold)
+        features['f0_hz'] = f0_hz
 
     if mfcc:
         # overlap and fft_size taken from the code
