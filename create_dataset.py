@@ -9,8 +9,9 @@ from sklearn.model_selection import train_test_split
 from feature_extraction import extract_features_from_frames
 from utilities import frame_generator, load_track
 
-
 SAMPLE_RATE = 16000
+VAL_RATIO = 0.2
+
 
 if __name__ == "__main__":
 
@@ -31,7 +32,7 @@ if __name__ == "__main__":
         frames.append(frame_generator(track, args.dur_frame*SAMPLE_RATE))
     frames = np.concatenate(frames, axis=0)   
     
-    trainX, valX = train_test_split(frames)
+    trainX, valX = train_test_split(frames, test_size=VAL_RATIO)
     print('Train set size: {}\nVal set size: {}'.format(len(trainX),len(valX)))
 
     train_features = extract_features_from_frames(trainX, mfcc=args.mfcc, sample_rate=SAMPLE_RATE,
