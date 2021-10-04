@@ -25,7 +25,7 @@ def concat_dct(dcts):
     return {k:  np.array([dct[k] for dct in dcts]) for k in dcts[0].keys()}
 
 def frame_generator(track, frame_size=64000):
-    return track[:len(track)-len(track)%frame_size].reshape(-1, frame_size)
+    return track[:-(len(track)%frame_size)].reshape(-1, frame_size)
 
 def load_track(path, sample_rate=16000, pitch_shift=0, normalize=False):
     """pitch_shift in semitones."""
