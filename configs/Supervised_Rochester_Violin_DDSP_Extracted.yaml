@@ -1,12 +1,11 @@
-run_name: Annotations-LayerNorm
-# Experiment tracking with wandb
-wandb:
+run_name: DDSP_Extracted
+wandb: # Experiment tracking with wandb
   project_name: DDSP_Rochester_Violin # Leave empty for not using wandb
   entity: 'whatever_llc'
 data:
   instrument: Violin
   # Path to the audio clips or the created dataset
-  path: /home/ubuntu/ddsp_simplified/datasets/rochester_violin
+  path: /home/ubuntu/ddsp_simplified/datasets/rochester_violin_ddsp_extracted
   sample_rate: 16000
   # Duration of a clip
   clip_dur: 4
@@ -36,4 +35,4 @@ optimizer:
   lr: 0.001
 training:
   batch_size: 32
-  epochs: 5000
+  epochs: 3000
