@@ -7,6 +7,7 @@ from ddsp.spectral_ops import LD_RANGE
 
 from utilities import at_least_3d
 
+# TODO: downsampling methods for both inputs
 class F0LoudnessPreprocessor(tfkl.Layer):
     """Resamples and scales 'f0_hz' and 'loudness_db' features. Used in the Supervised Setting."""
 
@@ -25,9 +26,10 @@ class F0LoudnessPreprocessor(tfkl.Layer):
         f0_midi_scaled = hz_to_midi(f0_hz) / F0_RANGE # in the original library it is called f0_scaled
         ld_scaled = (loudness_db / LD_RANGE) + 1.0
         
-        return {"f0_hz": at_least_3d(inputs["f0_hz"]),  # f0_hz kept for the harmonic synth, convert to 3d here
-                "f0_scaled":f0_midi_scaled,             # f0_scaled, ld_scaled used in the decoder in this form
-                "ld_scaled":ld_scaled}                 
+        return {"f0_hz": at_least_3d(inputs["f0_hz"]),              # convert both to 3d here
+                "loudness_db": at_least_3d(inputs['loudness_db']),
+                "f0_scaled": f0_midi_scaled,                         # f0_scaled, ld_scaled used 
+                "ld_scaled": ld_scaled}                              # in the decoder in this form
 
     def resample(self, x):
         x = at_least_3d(x)
