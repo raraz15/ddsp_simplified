@@ -41,7 +41,7 @@ class DecoderWithoutLatent(tfkl.Layer):
 
     def call(self, inputs):
         
-        x_f0 = self.MLP_f0(inputs['f0_midi_scaled'])
+        x_f0 = self.MLP_f0(inputs['f0_scaled'])
         x_l = self.MLP_l(inputs['ld_scaled'])
         inputs = [x_f0, x_l]
         
@@ -88,7 +88,7 @@ class DecoderWithLatent(tfkl.Layer):
 
     def call(self, inputs):
         
-        x_f0 = self.MLP_f0(inputs['f0_midi_scaled'])
+        x_f0 = self.MLP_f0(inputs['f0_scaled'])
         x_l = self.MLP_l(inputs['ld_scaled'])
         x_z = self.MLP_z(inputs['z'])
         

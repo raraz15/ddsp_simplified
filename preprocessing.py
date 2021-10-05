@@ -22,12 +22,12 @@ class F0LoudnessPreprocessor(tfkl.Layer):
 
         # For NN training, scale frequency and loudness to the range [0, 1].
         # Log-scale f0 features. Loudness from [-1, 0] to [1, 0].
-        f0_midi_scaled = hz_to_midi(f0_hz) / F0_RANGE
+        f0_midi_scaled = hz_to_midi(f0_hz) / F0_RANGE # in the original library it is called f0_scaled
         ld_scaled = (loudness_db / LD_RANGE) + 1.0
         
-        return {"f0_hz": at_least_3d(inputs["f0_hz"]),  # kept for the harmonic synth, convert to 3d here
-                "f0_midi_scaled":f0_midi_scaled,        # used in the decoder in this form
-                "ld_scaled":ld_scaled}                  # same as f0_midi_scaled
+        return {"f0_hz": at_least_3d(inputs["f0_hz"]),  # f0_hz kept for the harmonic synth, convert to 3d here
+                "f0_scaled":f0_midi_scaled,             # f0_scaled, ld_scaled used in the decoder in this form
+                "ld_scaled":ld_scaled}                 
 
     def resample(self, x):
         x = at_least_3d(x)
@@ -69,7 +69,7 @@ class MidiF0LoudnessPreprocessor(tfkl.Layer):
 
     def call(self, inputs):
        
-        loudness_db, f0_scaled = inputs["loudness_db"], inputs["f0_midi_scaled"]
+        loudness_db, f0_scaled = inputs["loudness_db"], inputs["f0_scaled"]
                
         # Resample features to time_steps.
         f0_scaled = resample(f0_scaled, self.timesteps)
@@ -84,7 +84,7 @@ class MidiF0LoudnessPreprocessor(tfkl.Layer):
         
         f0_hz = resample(at_least_3d(f0_hz), 1000)
        
-        return {"f0_hz":f0_hz, "loudness_db":loudness_db, "f0_midi_scaled":f0_scaled, "ld_scaled":ld_scaled}
+        return {"f0_hz":f0_hz, "loudness_db":loudness_db, "f0_scaled":f0_scaled, "ld_scaled":ld_scaled}
 
     def resample(self, x):
         x = at_least_3d(x)

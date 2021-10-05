@@ -36,7 +36,6 @@ class UnsupervisedEncoder(tfkl.Layer):
         self.encoder_f = Encoder_f() #timesteps=timesteps
         #l is extracted in the dataset, normalized in the preprocessor
         
-    # f0_midi_scaled ???????????
     def call(self, features):
         
         z = self.encoder_z(features)
@@ -50,11 +49,11 @@ class UnsupervisedEncoder(tfkl.Layer):
 
         print('f0_hz: {}'.format(f0_hz))
 
-        f0_midi_scaled = hz_to_midi(f0_hz) / F0_RANGE         
+        f0_scaled = hz_to_midi(f0_hz) / F0_RANGE         
         
         return {'z': z,
                 'f0_hz': f0_hz,
-                'f0_midi_scaled': f0_midi_scaled,
+                'f0_scaled': f0_scaled,
                 'ld_scaled': ld_scaled}
                
 

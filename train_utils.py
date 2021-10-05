@@ -10,7 +10,7 @@ from decoders import DecoderWithoutLatent, DecoderWithLatent
 from losses import SpectralLoss, MultiLoss
 from callbacks import ModelCheckpoint, CustomWandbCallback 
 
-from metrics import f0_midi_scaled_L1_loss
+from metrics import f0_scaled_L1_loss
 
 from dataloader import make_supervised_dataset, make_unsupervised_dataset
 
@@ -52,7 +52,7 @@ def make_unsupervised_model(config):
         tracker_names = ['spec_loss']
     else:
         tracker_names = ['spec_loss', 'perc_loss', 'total_loss']
-    metric_fns = {"F0_recons_L1": f0_midi_scaled_L1_loss}        
+    metric_fns = {"F0_recons_L1": f0_scaled_L1_loss}        
     model = UnsupervisedAutoencoder(
                                 encoder=encoder,
                                 decoder=decoder,
